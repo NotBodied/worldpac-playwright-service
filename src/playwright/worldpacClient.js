@@ -16,8 +16,8 @@ async function ensureLoggedIn(page) {
 
   console.log("🔑 Logging into Worldpac...");
 
-  const userInput = page.getByLabel("User ID");
-  const passwordInput = page.getByLabel("Password");
+  const userInput = page.locator('#username');
+  const passwordInput = page.locator('input[type="password"]');
 
   // Wait for inputs (ONLY this method)
   await userInput.waitFor({ timeout: 15000 });
