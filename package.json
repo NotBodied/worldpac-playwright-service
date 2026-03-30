@@ -74,7 +74,8 @@
     "wrappy": "^1.0.2"
   },
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "postinstall": "npx playwright install --with-deps"
   },
   "keywords": [],
   "author": "",
