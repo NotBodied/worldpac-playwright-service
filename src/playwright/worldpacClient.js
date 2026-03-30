@@ -12,16 +12,13 @@ async function ensureLoggedIn(page) {
 
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
-  const loginButton = page.locator('.login-form-submit-button');
 
-  // Wait for full login form to appear
+  // Wait ONLY for inputs (no button dependency)
   await Promise.all([
     userInput.waitFor({ timeout: 15000 }),
     passwordInput.waitFor({ timeout: 15000 }),
-    loginButton.waitFor({ timeout: 15000 }),
   ]);
 
-  // Check if login form is actually visible
   const onLoginPage = await userInput.isVisible().catch(() => false);
 
   if (!onLoginPage) {
@@ -34,18 +31,15 @@ async function ensureLoggedIn(page) {
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  // Submit form (ENTER works better than click for many apps)
+  console.log("⌨️ Submitting login with ENTER...");
+
+  // ✅ THIS is the key fix
   await passwordInput.press("Enter");
-
-  console.log("👉 Attempting to click login button...");
-
-  // Click as backup
-  await loginButton.click({ force: true });
 
   // Wait for login success (search bar appearing)
   const loginSuccess = await Promise.race([
-    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
-    userInput.waitFor({ timeout: 10000 }).then(() => false).catch(() => false),
+    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
+    userInput.waitFor({ timeout: 15000 }).then(() => false).catch(() => false),
   ]);
 
   if (!loginSuccess) {
@@ -62,7 +56,7 @@ async function searchParts({ query, connection_id }) {
 
   console.log("🔍 Searching:", query);
 
-  // TEMP placeholder (we replace this next)
+  // TEMP placeholder
   await page.goto("https://example.com");
   await page.waitForTimeout(1000);
 
