@@ -27,7 +27,18 @@ async function ensureLoggedIn(page) {
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
   // Click login button
-  await page.getByRole("button", { name: "LOGIN" }).click();
+  const loginButton = page.locator('.login-form-submit-button');
+
+  // Wait for button to be visible + enabled
+  await loginButton.waitFor({ state: "visible", timeout: 15000 });
+
+  console.log("👉 Attempting to click login button...");
+
+  // Small delay helps with React/Material UI hydration
+  await page.waitForTimeout(500);
+
+  // Force click (important)
+  await loginButton.click({ force: true });
 
   // Wait for login to complete
   await page.waitForTimeout(5000);
