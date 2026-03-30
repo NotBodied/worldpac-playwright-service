@@ -8,44 +8,44 @@ async function ensureLoggedIn(page) {
     timeout: 60000,
   });
 
-  // Wait for login form or logged-in state
-  await Promise.race([
-    page.locator('#username').waitFor({ timeout: 15000 }),
-    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).catch(() => {})
+  console.log("🌐 Current URL:", page.url());
+
+  const userInput = page.locator('#username');
+  const passwordInput = page.locator('input[type="password"]');
+  const loginButton = page.locator('.login-form-submit-button');
+
+  // Wait for full login form to appear
+  await Promise.all([
+    userInput.waitFor({ timeout: 15000 }),
+    passwordInput.waitFor({ timeout: 15000 }),
+    loginButton.waitFor({ timeout: 15000 }),
   ]);
 
-  // Already logged in
-  if (!page.url().includes("/login")) {
-    console.log("✅ Already logged in");
+  // Check if login form is actually visible
+  const onLoginPage = await userInput.isVisible().catch(() => false);
+
+  if (!onLoginPage) {
+    console.log("✅ Already logged in (no login form)");
     return;
   }
 
   console.log("🔑 Logging into Worldpac...");
 
-  const userInput = page.locator('#username');
-  const passwordInput = page.locator('input[type="password"]');
-
-  await userInput.waitFor({ timeout: 15000 });
-
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  // 🚨 Submit form properly
+  // Submit form (ENTER works better than click for many apps)
   await passwordInput.press("Enter");
-
-  const loginButton = page.locator('.login-form-submit-button');
-
-  await loginButton.waitFor({ state: "visible", timeout: 15000 });
 
   console.log("👉 Attempting to click login button...");
 
-  await page.waitForTimeout(500);
+  // Click as backup
   await loginButton.click({ force: true });
 
-  // ✅ Detect login success via UI
+  // Wait for login success (search bar appearing)
   const loginSuccess = await Promise.race([
     page.locator('input[placeholder*="Search"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
-    page.locator('#username').waitFor({ timeout: 10000 }).then(() => false).catch(() => false)
+    userInput.waitFor({ timeout: 10000 }).then(() => false).catch(() => false),
   ]);
 
   if (!loginSuccess) {
@@ -62,6 +62,7 @@ async function searchParts({ query, connection_id }) {
 
   console.log("🔍 Searching:", query);
 
+  // TEMP placeholder (we replace this next)
   await page.goto("https://example.com");
   await page.waitForTimeout(1000);
 
