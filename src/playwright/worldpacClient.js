@@ -8,13 +8,13 @@ async function ensureLoggedIn(page) {
     timeout: 60000,
   });
 
-  // Wait for either login form OR logged-in state
+  // Wait for login form or logged-in state
   await Promise.race([
     page.locator('#username').waitFor({ timeout: 15000 }),
-    page.locator('text=Logout').waitFor({ timeout: 15000 }).catch(() => {})
+    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).catch(() => {})
   ]);
 
-  // If already logged in
+  // Already logged in
   if (!page.url().includes("/login")) {
     console.log("✅ Already logged in");
     return;
@@ -25,13 +25,12 @@ async function ensureLoggedIn(page) {
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
 
-  // Retry-safe wait
   await userInput.waitFor({ timeout: 15000 });
 
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  // 🚨 trigger real submission
+  // 🚨 Submit form properly
   await passwordInput.press("Enter");
 
   const loginButton = page.locator('.login-form-submit-button');
@@ -43,7 +42,7 @@ async function ensureLoggedIn(page) {
   await page.waitForTimeout(500);
   await loginButton.click({ force: true });
 
-  // ✅ Detect success via UI, not URL
+  // ✅ Detect login success via UI
   const loginSuccess = await Promise.race([
     page.locator('input[placeholder*="Search"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
     page.locator('#username').waitFor({ timeout: 10000 }).then(() => false).catch(() => false)
@@ -54,17 +53,15 @@ async function ensureLoggedIn(page) {
   }
 
   console.log("✅ Logged in successfully");
-  
+}
 
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
 
-  // 🔐 ENSURE LOGIN
   await ensureLoggedIn(page);
 
   console.log("🔍 Searching:", query);
 
-  // TEMP placeholder
   await page.goto("https://example.com");
   await page.waitForTimeout(1000);
 
