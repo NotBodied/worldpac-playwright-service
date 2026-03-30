@@ -8,7 +8,13 @@ async function ensureLoggedIn(page) {
     timeout: 60000,
   });
 
-  // Check if already logged in
+  // Wait for either login form OR logged-in state
+  await Promise.race([
+    page.locator('#username').waitFor({ timeout: 15000 }),
+    page.locator('text=Logout').waitFor({ timeout: 15000 }).catch(() => {})
+  ]);
+
+  // If already logged in
   if (!page.url().includes("/login")) {
     console.log("✅ Already logged in");
     return;
@@ -19,31 +25,27 @@ async function ensureLoggedIn(page) {
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
 
-  // Wait for inputs (ONLY this method)
+  // Retry-safe wait
   await userInput.waitFor({ timeout: 15000 });
 
-  // Fill credentials
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  // Click login button
   const loginButton = page.locator('.login-form-submit-button');
 
-  // Wait for button to be visible + enabled
   await loginButton.waitFor({ state: "visible", timeout: 15000 });
 
   console.log("👉 Attempting to click login button...");
 
-  // Small delay helps with React/Material UI hydration
   await page.waitForTimeout(500);
-
-  // Force click (important)
   await loginButton.click({ force: true });
 
-  // Wait for login to complete
-  await page.waitForTimeout(5000);
+  // Wait for either success OR failure
+  await Promise.race([
+    page.waitForURL(url => !url.includes("/login"), { timeout: 15000 }),
+    page.locator('#username').waitFor({ timeout: 15000 }).catch(() => {})
+  ]);
 
-  // Validate login success
   if (page.url().includes("/login")) {
     throw new Error("❌ Login failed — still on login page");
   }
