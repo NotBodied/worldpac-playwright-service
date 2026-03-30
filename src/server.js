@@ -12,8 +12,11 @@ app.get("/", (req, res) => {
   res.send("Worldpac Playwright Service Running");
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
-app.listen(PORT, () => {
+if (!PORT) {
+  throw new Error("PORT is not defined");
+}
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
