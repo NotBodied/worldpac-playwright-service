@@ -3,17 +3,12 @@ const { getSession } = require("./sessionManager");
 async function ensureLoggedIn(page) {
   console.log("🔐 Checking login state...");
 
-  // Go to login page always (safe starting point)
   await page.goto("https://speeddial.worldpac.com/#/login", {
-  waitUntil: "domcontentloaded",
-  timeout: 60000,
-});
+    waitUntil: "domcontentloaded",
+    timeout: 60000,
+  });
 
-  await page.waitForSelector('input[placeholder="User ID"]', {
-  timeout: 15000,
-});
-
-  // Check if already logged in (URL changes or dashboard element exists)
+  // Check if already logged in
   if (!page.url().includes("/login")) {
     console.log("✅ Already logged in");
     return;
@@ -21,18 +16,21 @@ async function ensureLoggedIn(page) {
 
   console.log("🔑 Logging into Worldpac...");
 
-  // Wait for inputs (robust selectors)
-  await page.waitForSelector('input[placeholder="User ID"]', { timeout: 10000 });
+  const userInput = page.getByLabel("User ID");
+  const passwordInput = page.getByLabel("Password");
+
+  // Wait for inputs (ONLY this method)
+  await userInput.waitFor({ timeout: 15000 });
 
   // Fill credentials
-  await page.fill('input[placeholder="User ID"]', process.env.WORLDPAC_USERNAME);
-  await page.fill('input[placeholder="Password"]', process.env.WORLDPAC_PASSWORD);
+  await userInput.fill(process.env.WORLDPAC_USERNAME);
+  await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
   // Click login button
-  await page.click('button:has-text("LOGIN")');
+  await page.getByRole("button", { name: "LOGIN" }).click();
 
-  // Wait for navigation away from login
-  await page.waitForTimeout(4000);
+  // Wait for login to complete
+  await page.waitForTimeout(5000);
 
   // Validate login success
   if (page.url().includes("/login")) {
