@@ -1,0 +1,31 @@
+[build]
+builder = "nixpacks"
+
+[phases.setup]
+nixPkgs = [
+  "nodejs",
+  "playwright",
+  "glib",
+  "nss",
+  "nspr",
+  "atk",
+  "at-spi2-atk",
+  "cups",
+  "libdrm",
+  "libxkbcommon",
+  "libxcomposite",
+  "libxdamage",
+  "libxfixes",
+  "libxrandr",
+  "mesa",
+  "pango",
+  "cairo",
+  "expat",
+  "libxcb"
+]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npx playwright install chromium"]
