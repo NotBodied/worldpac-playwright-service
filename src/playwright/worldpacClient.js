@@ -31,6 +31,9 @@ async function ensureLoggedIn(page) {
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
+  // 🚨 trigger real submission
+  await passwordInput.press("Enter");
+
   const loginButton = page.locator('.login-form-submit-button');
 
   await loginButton.waitFor({ state: "visible", timeout: 15000 });
@@ -40,18 +43,18 @@ async function ensureLoggedIn(page) {
   await page.waitForTimeout(500);
   await loginButton.click({ force: true });
 
-  // Wait for either success OR failure
-  await Promise.race([
-    page.waitForURL(url => !url.pathname.includes("/login"), { timeout: 15000 }),
-    page.locator('#username').waitFor({ timeout: 15000 }).catch(() => {})
-]);
+  // ✅ Detect success via UI, not URL
+  const loginSuccess = await Promise.race([
+    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false),
+    page.locator('#username').waitFor({ timeout: 10000 }).then(() => false).catch(() => false)
+  ]);
 
-  if (page.url().includes("/login")) {
+  if (!loginSuccess) {
     throw new Error("❌ Login failed — still on login page");
   }
 
   console.log("✅ Logged in successfully");
-}
+  
 
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
