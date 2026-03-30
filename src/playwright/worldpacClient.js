@@ -8,12 +8,18 @@ async function ensureLoggedIn(page) {
     timeout: 60000,
   });
 
+  await page.screenshot({ path: "/tmp/debug.png" });
+  console.log("📸 Screenshot saved to /tmp/debug.png");
+  
+  const html = await page.content();
+  console.log("🧾 PAGE HTML START");
+  console.log(html.substring(0, 2000)); // first chunk
+  console.log("🧾 PAGE HTML END");
   console.log("🌐 Current URL:", page.url());
 
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
 
-  // Wait ONLY for inputs (no button dependency)
   await Promise.all([
     userInput.waitFor({ timeout: 15000 }),
     passwordInput.waitFor({ timeout: 15000 }),
@@ -31,15 +37,21 @@ async function ensureLoggedIn(page) {
   await userInput.fill(process.env.WORLDPAC_USERNAME);
   await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  console.log("⌨️ Submitting login with ENTER...");
-
-  // ✅ THIS is the key fix
+  console.log("⌨️ Pressing ENTER...");
   await passwordInput.press("Enter");
 
-  // Wait for login success (search bar appearing)
+  // ✅ NEW: click ANY submit button (not class-based)
+  const submitButton = page.locator('button[type="submit"]');
+
+  console.log("🖱️ Clicking submit button...");
+
+  await submitButton.waitFor({ timeout: 10000 });
+  await submitButton.click({ force: true });
+
+  // Wait for login success (page changes OR search appears)
   const loginSuccess = await Promise.race([
+    page.waitForURL(url => !url.toString().includes("/login"), { timeout: 15000 }).then(() => true).catch(() => false),
     page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
-    userInput.waitFor({ timeout: 15000 }).then(() => false).catch(() => false),
   ]);
 
   if (!loginSuccess) {
@@ -56,7 +68,6 @@ async function searchParts({ query, connection_id }) {
 
   console.log("🔍 Searching:", query);
 
-  // TEMP placeholder
   await page.goto("https://example.com");
   await page.waitForTimeout(1000);
 
