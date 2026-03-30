@@ -42,9 +42,9 @@ async function ensureLoggedIn(page) {
 
   // Wait for either success OR failure
   await Promise.race([
-    page.waitForURL(url => !url.includes("/login"), { timeout: 15000 }),
+    page.waitForURL(url => !url.pathname.includes("/login"), { timeout: 15000 }),
     page.locator('#username').waitFor({ timeout: 15000 }).catch(() => {})
-  ]);
+]);
 
   if (page.url().includes("/login")) {
     throw new Error("❌ Login failed — still on login page");
