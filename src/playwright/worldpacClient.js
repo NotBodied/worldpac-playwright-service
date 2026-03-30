@@ -5,8 +5,13 @@ async function ensureLoggedIn(page) {
 
   // Go to login page always (safe starting point)
   await page.goto("https://speeddial.worldpac.com/#/login", {
-    waitUntil: "networkidle",
-  });
+  waitUntil: "domcontentloaded",
+  timeout: 60000,
+});
+
+  await page.waitForSelector('input[placeholder="User ID"]', {
+  timeout: 15000,
+});
 
   // Check if already logged in (URL changes or dashboard element exists)
   if (!page.url().includes("/login")) {
