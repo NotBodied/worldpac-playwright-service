@@ -66,6 +66,15 @@ async function searchParts({ query, connection_id }) {
 
   await ensureLoggedIn(page);
 
+  await page.screenshot({ path: "/tmp/after-login.png" });
+
+  const html = await page.content();
+  console.log("🧾 AFTER LOGIN HTML START");
+  console.log(html.substring(0, 2000));
+  console.log("🧾 AFTER LOGIN HTML END");
+
+  console.log("🌐 AFTER LOGIN URL:", page.url());
+
   console.log("🔍 Searching:", query);
 
   await page.goto("https://example.com");
