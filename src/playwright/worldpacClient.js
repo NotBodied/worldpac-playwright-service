@@ -66,7 +66,10 @@ async function searchParts({ query, connection_id }) {
 
   await ensureLoggedIn(page);
 
-  await page.screenshot({ path: "/tmp/after-login.png" });
+  await page.screenshot({ 
+    path: "/tmp/after-login.png",
+    timeout: 5000 
+  });
 
   const html = await page.content();
   console.log("🧾 AFTER LOGIN HTML START");
