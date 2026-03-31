@@ -59,18 +59,25 @@ async function ensureLoggedIn(page) {
   }
 
   console.log("✅ Logged in successfully");
-}
+ 
 
+  // Wait for app to fully render
+  console.log("⏳ Waiting for dashboard to load...");
+  await page.waitForTimeout(5000);
+
+  // Dump real DOM
+  const html = await page.content();
+  console.log("🧾 AFTER LOGIN HTML START");
+  console.log(html.substring(0, 3000));
+  console.log("🧾 AFTER LOGIN HTML END");
+
+  console.log("🌐 AFTER LOGIN URL:", page.url());
+ }
+ 
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
 
   await ensureLoggedIn(page);
-
-  await page.screenshot({ 
-    path: "/tmp/after-login.png",
-    timeout: 5000, 
-    animations: "disabled"
-  });
 
   const html = await page.content();
   console.log("🧾 AFTER LOGIN HTML START");
