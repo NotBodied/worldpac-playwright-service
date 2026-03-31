@@ -106,11 +106,57 @@ async function searchParts({ query, connection_id }) {
    console.log(visibleText.substring(0, 2000));
    console.log("🧾 PAGE TEXT END");
 
+   
+
    console.log("🌐 AFTER SEARCH URL:", page.url());
 
    console.log("🔍 Searching:", query);
 
- return [{ debug: "search executed" }];
+//    return [{ debug: "search executed" }];
+
+   const lines = visibleText.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const parts = [];
+
+  let currentPart = null;
+
+  for (let i = 0; i < lines.length; i++) {
+  const line = lines[i];
+
+  // Detect product name
+  if (line.includes("Window Wiper Blade")) {
+    if (currentPart) parts.push(currentPart);
+
+    currentPart = {
+      description: line,
+      part_number: null,
+      brand: null,
+      price: null,
+    };
+  }
+
+  // Product ID
+  if (line.startsWith("Product ID:")) {
+    currentPart.part_number = line.replace("Product ID:", "").trim();
+  }
+
+  // MFR ID (brand clue later)
+    if (line.startsWith("MFR ID:")) {
+      currentPart.brand = line.replace("MFR ID:", "").trim();
+    }
+
+    // Price
+    if (line === "Price:" && lines[i + 1]) {
+      currentPart.price = lines[i + 1].replace("$", "").trim();
+    }
+  }
+
+  // Push last item
+  if (currentPart) parts.push(currentPart);
+
+  console.log("🧾 PARSED PARTS:", parts);
+
+  return parts;
 }
 
 module.exports = { searchParts };
