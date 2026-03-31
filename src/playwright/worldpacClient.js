@@ -57,6 +57,22 @@ async function ensureLoggedIn(page) {
   console.log("🧾 AFTER SUBMIT HTML END");
 
   console.log("🌐 AFTER SUBMIT URL:", page.url());
+
+  console.log("🔍 Finding search input...");
+
+  // Wait for ANY input after login
+  await page.waitForSelector('input', { timeout: 20000 });
+
+  const inputs = await page.locator('input').all();
+
+  console.log("🧾 INPUT COUNT:", inputs.length);
+
+  // Log all placeholders / names
+  for (let i = 0; i < inputs.length; i++) {
+    const placeholder = await inputs[i].getAttribute('placeholder');
+    const name = await inputs[i].getAttribute('name');
+    console.log(`Input ${i}:`, { placeholder, name });
+
 }
 
 async function searchParts({ query, connection_id }) {
@@ -87,3 +103,4 @@ async function searchParts({ query, connection_id }) {
 }
 
 module.exports = { searchParts };
+}
