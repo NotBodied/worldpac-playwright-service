@@ -9,21 +9,18 @@ async function ensureLoggedIn(page) {
   });
 
   console.log("🌐 Current URL:", page.url());
+  console.log("⏳ Waiting for app to render login form...");
 
+  // Step 1: wait for app to hydrate
+  await page.waitForSelector('input', { timeout: 20000 });
+
+  // Step 2: wait for actual login field
+  await page.waitForSelector('#username', { timeout: 20000 });
+
+  // Step 3: NOW define locators (only once)
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
-
-  await Promise.all([
-    userInput.waitFor({ timeout: 15000 }),
-    passwordInput.waitFor({ timeout: 15000 }),
-  ]);
-
-  const onLoginPage = await userInput.isVisible().catch(() => false);
-
-  if (!onLoginPage) {
-    console.log("✅ Already logged in (no login form)");
-    return;
-  }
+  const submitButton = page.locator('button[type="submit"]');
 
   console.log("🔑 Logging into Worldpac...");
 
@@ -33,15 +30,13 @@ async function ensureLoggedIn(page) {
   console.log("⌨️ Pressing ENTER...");
   await passwordInput.press("Enter");
 
-  const submitButton = page.locator('button[type="submit"]');
-
   console.log("🖱️ Clicking submit button...");
-  await submitButton.waitFor({ timeout: 10000 });
   await submitButton.click({ force: true });
 
+  // Wait for login success
   const loginSuccess = await Promise.race([
-    page.waitForURL(url => !url.toString().includes("/login"), { timeout: 15000 }).then(() => true).catch(() => false),
     page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
+    userInput.waitFor({ timeout: 15000 }).then(() => false).catch(() => false),
   ]);
 
   if (!loginSuccess) {
@@ -50,11 +45,9 @@ async function ensureLoggedIn(page) {
 
   console.log("✅ Logged in successfully");
 
-  // ⏳ Wait for app to fully render
   console.log("⏳ Waiting for dashboard to load...");
   await page.waitForTimeout(5000);
 
-  // 🧾 Dump real DOM
   const html = await page.content();
   console.log("🧾 AFTER LOGIN HTML START");
   console.log(html.substring(0, 3000));
