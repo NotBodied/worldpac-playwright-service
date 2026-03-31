@@ -24,36 +24,39 @@ async function ensureLoggedIn(page) {
 
   console.log("🔑 Logging into Worldpac...");
 
-  await userInput.fill(process.env.WORLDPAC_USERNAME);
-  await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
+  // BEFORE typing
+  await page.waitForTimeout(2000);
+  console.log("📸 BEFORE INPUT");
+  console.log("🌐 URL:", page.url());
 
-  console.log("⌨️ Pressing ENTER...");
-  await passwordInput.press("Enter");
+  // TYPE like real user
+  await userInput.click();
+  await userInput.type(process.env.WORLDPAC_USERNAME, { delay: 50 });
 
-  console.log("🖱️ Clicking submit button...");
-  await submitButton.click({ force: true });
+  await passwordInput.click();
+  await passwordInput.type(process.env.WORLDPAC_PASSWORD, { delay: 50 });
 
-  // Wait for login success
-  const loginSuccess = await Promise.race([
-    page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
-    userInput.waitFor({ timeout: 15000 }).then(() => false).catch(() => false),
-  ]);
+  // AFTER typing
+  await page.waitForTimeout(1000);
+  const htmlBeforeSubmit = await page.content();
+  console.log("🧾 BEFORE SUBMIT HTML START");
+  console.log(htmlBeforeSubmit.substring(0, 2000));
+  console.log("🧾 BEFORE SUBMIT HTML END");
 
-  if (!loginSuccess) {
-    throw new Error("❌ Login failed — still on login page");
-  }
+  // CLICK submit
+  console.log("🖱️ Clicking submit...");
+  await submitButton.click();
 
-  console.log("✅ Logged in successfully");
-
-  console.log("⏳ Waiting for dashboard to load...");
+  // WAIT and OBSERVE (this is key)
   await page.waitForTimeout(5000);
 
-  const html = await page.content();
-  console.log("🧾 AFTER LOGIN HTML START");
-  console.log(html.substring(0, 3000));
-  console.log("🧾 AFTER LOGIN HTML END");
+  // AFTER submit
+  const htmlAfterSubmit = await page.content();
+  console.log("🧾 AFTER SUBMIT HTML START");
+  console.log(htmlAfterSubmit.substring(0, 2000));
+  console.log("🧾 AFTER SUBMIT HTML END");
 
-  console.log("🌐 AFTER LOGIN URL:", page.url());
+  console.log("🌐 AFTER SUBMIT URL:", page.url());
 }
 
 async function searchParts({ query, connection_id }) {
