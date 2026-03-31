@@ -8,13 +8,6 @@ async function ensureLoggedIn(page) {
     timeout: 60000,
   });
 
-  await page.screenshot({ path: "/tmp/debug.png" });
-  console.log("📸 Screenshot saved to /tmp/debug.png");
-  
-  const html = await page.content();
-  console.log("🧾 PAGE HTML START");
-  console.log(html.substring(0, 2000)); // first chunk
-  console.log("🧾 PAGE HTML END");
   console.log("🌐 Current URL:", page.url());
 
   const userInput = page.locator('#username');
@@ -40,15 +33,12 @@ async function ensureLoggedIn(page) {
   console.log("⌨️ Pressing ENTER...");
   await passwordInput.press("Enter");
 
-  // ✅ NEW: click ANY submit button (not class-based)
   const submitButton = page.locator('button[type="submit"]');
 
   console.log("🖱️ Clicking submit button...");
-
   await submitButton.waitFor({ timeout: 10000 });
   await submitButton.click({ force: true });
 
-  // Wait for login success (page changes OR search appears)
   const loginSuccess = await Promise.race([
     page.waitForURL(url => !url.toString().includes("/login"), { timeout: 15000 }).then(() => true).catch(() => false),
     page.locator('input[placeholder*="Search"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false),
@@ -59,21 +49,20 @@ async function ensureLoggedIn(page) {
   }
 
   console.log("✅ Logged in successfully");
- 
 
-  // Wait for app to fully render
+  // ⏳ Wait for app to fully render
   console.log("⏳ Waiting for dashboard to load...");
   await page.waitForTimeout(5000);
 
-  // Dump real DOM
+  // 🧾 Dump real DOM
   const html = await page.content();
   console.log("🧾 AFTER LOGIN HTML START");
   console.log(html.substring(0, 3000));
   console.log("🧾 AFTER LOGIN HTML END");
 
   console.log("🌐 AFTER LOGIN URL:", page.url());
- }
- 
+}
+
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
 
