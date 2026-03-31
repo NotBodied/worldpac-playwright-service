@@ -68,7 +68,8 @@ async function searchParts({ query, connection_id }) {
 
   await page.screenshot({ 
     path: "/tmp/after-login.png",
-    timeout: 5000 
+    timeout: 5000, 
+    animations: "disabled"
   });
 
   const html = await page.content();
