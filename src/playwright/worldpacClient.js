@@ -57,6 +57,13 @@ async function ensureLoggedIn(page) {
   console.log("🧾 AFTER SUBMIT HTML END");
 
   console.log("🌐 AFTER SUBMIT URL:", page.url());
+  
+}
+
+async function searchParts({ query, connection_id }) {
+  const { page } = await getSession(connection_id);
+
+  await ensureLoggedIn(page);
 
   console.log("🔍 Finding search input...");
 
@@ -72,13 +79,7 @@ async function ensureLoggedIn(page) {
     const placeholder = await inputs[i].getAttribute('placeholder');
     const name = await inputs[i].getAttribute('name');
     console.log(`Input ${i}:`, { placeholder, name });
-
-}
-
-async function searchParts({ query, connection_id }) {
-  const { page } = await getSession(connection_id);
-
-  await ensureLoggedIn(page);
+ }
 
   const html = await page.content();
   console.log("🧾 AFTER LOGIN HTML START");
@@ -103,4 +104,3 @@ async function searchParts({ query, connection_id }) {
 }
 
 module.exports = { searchParts };
-}
