@@ -76,33 +76,39 @@ async function searchParts({ query, connection_id }) {
   await searchInput.fill('');
 
   // Type query like real user
-  await searchInput.type(query, { delay: 50 });
+//   await searchInput.type(query, { delay: 50 });
+  await searchInput.type("wiper", { delay: 50 });
 
   // Submit search
   await searchInput.press("Enter");
 
   console.log("🔍 Waiting for results container...");
 
-  // Wait for ANY div/list/table that appears AFTER search
-  await page.waitForSelector('div, table, ul', { timeout: 15000 });
-
   // Wait for results to load
-  console.log("⏳ Waiting for results...");
-  await page.waitForTimeout(5000);
+  console.log("⏳ Waiting for results (text-based)...");
+
+  // Wait until page text actually changes
+  await page.waitForFunction(() => {
+    const text = document.body.innerText;
+    return text && text.length > 1000; // crude but effective
+  }, { timeout: 20000 });
+
+  // Small buffer
+  await page.waitForTimeout(2000);
 
   const html = await page.content();
-  console.log("🧾 SEARCH RESULTS HTML START");
-  console.log(html.substring(0, 2000));
-  console.log("🧾 SEARCH RESULTS HTML END");
+   console.log("🧾 SEARCH RESULTS HTML START");
+   console.log(html.substring(0, 2000));
+   console.log("🧾 SEARCH RESULTS HTML END");
 
   const visibleText = await page.evaluate(() => document.body.innerText);
-  console.log("🧾 PAGE TEXT START");
-  console.log(visibleText.substring(0, 2000));
-  console.log("🧾 PAGE TEXT END");
+   console.log("🧾 PAGE TEXT START");
+   console.log(visibleText.substring(0, 2000));
+   console.log("🧾 PAGE TEXT END");
 
-  console.log("🌐 AFTER SEARCH URL:", page.url());
+   console.log("🌐 AFTER SEARCH URL:", page.url());
 
-  console.log("🔍 Searching:", query);
+   console.log("🔍 Searching:", query);
 
  return [{ debug: "search executed" }];
 }
