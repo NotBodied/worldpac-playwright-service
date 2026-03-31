@@ -81,6 +81,11 @@ async function searchParts({ query, connection_id }) {
   // Submit search
   await searchInput.press("Enter");
 
+  console.log("🔍 Waiting for results container...");
+
+  // Wait for ANY div/list/table that appears AFTER search
+  await page.waitForSelector('div, table, ul', { timeout: 15000 });
+
   // Wait for results to load
   console.log("⏳ Waiting for results...");
   await page.waitForTimeout(5000);
@@ -89,6 +94,11 @@ async function searchParts({ query, connection_id }) {
   console.log("🧾 SEARCH RESULTS HTML START");
   console.log(html.substring(0, 2000));
   console.log("🧾 SEARCH RESULTS HTML END");
+
+  const visibleText = await page.evaluate(() => document.body.innerText);
+  console.log("🧾 PAGE TEXT START");
+  console.log(visibleText.substring(0, 2000));
+  console.log("🧾 PAGE TEXT END");
 
   console.log("🌐 AFTER SEARCH URL:", page.url());
 
