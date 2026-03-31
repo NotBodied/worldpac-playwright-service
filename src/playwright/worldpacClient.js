@@ -65,42 +65,36 @@ async function searchParts({ query, connection_id }) {
 
   await ensureLoggedIn(page);
 
-  console.log("🔍 Finding search input...");
+  console.log("🔍 Performing search...");
 
-  // Wait for ANY input after login
-  await page.waitForSelector('input', { timeout: 20000 });
+  const searchInput = page.locator('input[name="searchTerm"]');
 
-  const inputs = await page.locator('input').all();
+  // Wait for it to be usable
+  await searchInput.waitFor({ timeout: 15000 });
 
-  console.log("🧾 INPUT COUNT:", inputs.length);
+  // Clear anything in it
+  await searchInput.fill('');
 
-  // Log all placeholders / names
-  for (let i = 0; i < inputs.length; i++) {
-    const placeholder = await inputs[i].getAttribute('placeholder');
-    const name = await inputs[i].getAttribute('name');
-    console.log(`Input ${i}:`, { placeholder, name });
- }
+  // Type query like real user
+  await searchInput.type(query, { delay: 50 });
+
+  // Submit search
+  await searchInput.press("Enter");
+
+  // Wait for results to load
+  console.log("⏳ Waiting for results...");
+  await page.waitForTimeout(5000);
 
   const html = await page.content();
-  console.log("🧾 AFTER LOGIN HTML START");
+  console.log("🧾 SEARCH RESULTS HTML START");
   console.log(html.substring(0, 2000));
-  console.log("🧾 AFTER LOGIN HTML END");
+  console.log("🧾 SEARCH RESULTS HTML END");
 
-  console.log("🌐 AFTER LOGIN URL:", page.url());
+  console.log("🌐 AFTER SEARCH URL:", page.url());
 
   console.log("🔍 Searching:", query);
 
-  await page.goto("https://example.com");
-  await page.waitForTimeout(1000);
-
-  return [
-    {
-      description: "Brake Pad Set",
-      part_number: "BP123",
-      price: 89.99,
-      brand: "Bosch",
-    },
-  ];
+ return [{ debug: "search executed" }];
 }
 
 module.exports = { searchParts };
