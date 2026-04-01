@@ -158,51 +158,72 @@ async function searchParts({ query, connection_id }) {
 
    console.log("🔍 Searching:", query);
 
-//    return [{ debug: "search executed" }];
+   //   return [{ debug: "search executed" }];
 
-   const lines = visibleText.split("\n").map(l => l.trim()).filter(Boolean);
+     const lines = visibleText
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
 
   const parts = [];
 
   let currentPart = null;
 
   for (let i = 0; i < lines.length; i++) {
-  const line = lines[i];
+    const line = lines[i];
 
-  // Detect product name
-  if (line.includes("Window Wiper Blade")) {
-    if (currentPart) parts.push(currentPart);
+    // 🧠 Start a new part when we see Product ID
+    if (line.startsWith("Product ID:")) {
+      // Push previous part
+      if (currentPart) parts.push(currentPart);
 
-    currentPart = {
-      description: line,
-      part_number: null,
-      brand: null,
-      price: null,
-    };
-  }
+      currentPart = {
+        description: null,
+        part_number: line.replace("Product ID:", "").trim(),
+        brand: null,
+        price: null,
+      };
 
-  // Product ID
-  if (line.startsWith("Product ID:")) {
-    currentPart.part_number = line.replace("Product ID:", "").trim();
-  }
+      // Try to grab description ABOVE (usually correct)
+      if (i > 0) {
+        currentPart.description = lines[i - 1];
+      }
+    }
 
-  // MFR ID (brand clue later)
-    if (line.startsWith("MFR ID:")) {
+    // MFR ID (sometimes useful)
+    if (line.startsWith("MFR ID:") && currentPart) {
       currentPart.brand = line.replace("MFR ID:", "").trim();
     }
 
-    // Price
-    if (line === "Price:" && lines[i + 1]) {
-      currentPart.price = lines[i + 1].replace("$", "").trim();
+    // Price handling (robust)
+    if (line === "Price:" && currentPart) {
+     const nextLine = lines[i + 1];
+     if (nextLine && nextLine.includes("$")) {
+        currentPart.price = nextLine.replace("$", "").trim();
+      }
+    }
+
+    // Alternative price format (sometimes inline)
+    if (line.includes("$") && currentPart && !currentPart.price) {
+      const priceMatch = line.match(/\$\d+(\.\d+)?/);
+      if (priceMatch) {
+        currentPart.price = priceMatch[0].replace("$", "");
+      }
     }
   }
 
-  // Push last item
+  // Push last part
   if (currentPart) parts.push(currentPart);
 
-  console.log("🧾 PARSED PARTS:", parts);
+  // 🧹 Cleanup invalid entries
+  const cleanedParts = parts.filter(p =>
+    p.part_number || p.description
+  ); 
 
-  return parts;
-}
+  console.log("🧾 PARSED PARTS:", cleanedParts);
+
+  return cleanedParts;
 
 module.exports = { searchParts };
+
+}
