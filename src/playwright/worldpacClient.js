@@ -3,12 +3,30 @@ const { getSession } = require("./sessionManager");
 async function ensureLoggedIn(page) {
   console.log("🔐 Checking login state...");
 
-  await page.goto("https://speeddial.worldpac.com/#/login", {
+  // STEP 1: Always load app entry point
+  await page.goto("https://speeddial.worldpac.com/#", {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
-  // 👇 STEP 1: small wait (let SPA load)
-  await page.waitForTimeout(3000);
+
+  // 👇 STEP 2: small wait (let SPA load)
+  await page.waitForSelector('body', { timeout: 10000 });
+
+  // STEP 1: Always load app entry point
+  console.log("🔍 Checking if already logged in...");
+
+  const isLoggedIn = await page.locator('input[name="searchTerm"]')
+    .isVisible()
+    .catch(() => false);
+
+  if (isLoggedIn) {
+    console.log("✅ Already logged in — skipping login");
+    return;
+  }
+ 
+  // STEP 4: Only now attempt login
+  console.log("🔑 Not logged in — performing login...");
+  
 
   // 👇 STEP 2: HTML dump
   const html = await page.content();
