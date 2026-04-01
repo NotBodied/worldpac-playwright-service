@@ -1,108 +1,48 @@
 const { getSession } = require("./sessionManager");
 
 async function ensureLoggedIn(page) {
-  console.log("🔐 Checking login state...");
+  console.log("🔐 Ensuring login state...");
 
-  // STEP 1: Always load app entry point
-  await page.goto("https://speeddial.worldpac.com/#", {
+  // 1. Load app (NOT /login)
+  await page.goto("https://speeddial.worldpac.com/#/", {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
 
-  // 👇 STEP 2: small wait (let SPA load)
-  await page.waitForSelector('body', { timeout: 10000 });
+  // 2. Let SPA load
+  await page.waitForTimeout(3000);
 
-  // STEP 1: Always load app entry point
-  console.log("🔍 Checking if already logged in...");
-
+  // 3. Check if already logged in
   const isLoggedIn = await page.locator('input[name="searchTerm"]')
     .isVisible()
     .catch(() => false);
 
   if (isLoggedIn) {
-    console.log("✅ Already logged in — skipping login");
+    console.log("✅ Already logged in");
     return;
   }
- 
-  // STEP 4: Only now attempt login
-  console.log("🔑 Not logged in — performing login...");
-  
 
-  // 👇 STEP 2: HTML dump
-  const html = await page.content();
-  console.log("🧾 LOGIN PAGE HTML START");
-  console.log(html.substring(0, 2000));
-  console.log("🧾 LOGIN PAGE HTML END");
+  // 4. Perform login
+  console.log("🔑 Logging in...");
 
-  // 👇 STEP 3: visible text
-  const visibleText = await page.evaluate(() => document.body.innerText);
-  console.log("🧾 LOGIN PAGE TEXT START");
-  console.log(visibleText.substring(0, 1000));
-  console.log("🧾 LOGIN PAGE TEXT END");
-
-  // 👇 STEP 4: enumerate inputs (THIS is what you asked about)
-  const inputs = await page.locator('input').all();
-
-  console.log("🧾 LOGIN INPUT COUNT:", inputs.length);
-
-  for (let i = 0; i < inputs.length; i++) {
-    const placeholder = await inputs[i].getAttribute('placeholder');
-    const name = await inputs[i].getAttribute('name');
-    console.log(`Login Input ${i}:`, { placeholder, name });
-  }
-
-  // Step: 5 - check if we're already logged in (crude check for demo)
-  
-  console.log("🌐 Current URL:", page.url());
-  console.log("⏳ Waiting for app to render login form...");
-
-  // Step 1: wait for app to hydrate
-  await page.waitForSelector('input', { timeout: 20000 });
-
-  // Step 2: wait for actual login field
- //   await page.waitForSelector('#username', { timeout: 20000 });
-
-  // Step 3: NOW define locators (only once)
   const userInput = page.locator('#username');
   const passwordInput = page.locator('input[type="password"]');
   const submitButton = page.locator('button[type="submit"]');
 
-  console.log("🔑 Logging into Worldpac...");
+  // Wait for login form
+  await userInput.waitFor({ timeout: 15000 });
 
-  // BEFORE typing
-  await page.waitForTimeout(2000);
-  console.log("📸 BEFORE INPUT");
-  console.log("🌐 URL:", page.url());
+  // Fill credentials
+  await userInput.fill(process.env.WORLDPAC_USERNAME);
+  await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
 
-  // TYPE like real user
-  await userInput.click();
-  await userInput.type(process.env.WORLDPAC_USERNAME, { delay: 50 });
-
-  await passwordInput.click();
-  await passwordInput.type(process.env.WORLDPAC_PASSWORD, { delay: 50 });
-
-  // AFTER typing
-  await page.waitForTimeout(1000);
-  const htmlBeforeSubmit = await page.content();
-  console.log("🧾 BEFORE SUBMIT HTML START");
-  console.log(htmlBeforeSubmit.substring(0, 2000));
-  console.log("🧾 BEFORE SUBMIT HTML END");
-
-  // CLICK submit
-  console.log("🖱️ Clicking submit...");
+  // Submit
   await submitButton.click();
 
-  // WAIT and OBSERVE (this is key)
-  await page.waitForTimeout(5000);
+  // 5. Wait for success signal
+  await page.waitForSelector('input[name="searchTerm"]', { timeout: 15000 });
 
-  // AFTER submit
-  const htmlAfterSubmit = await page.content();
-  console.log("🧾 AFTER SUBMIT HTML START");
-  console.log(htmlAfterSubmit.substring(0, 2000));
-  console.log("🧾 AFTER SUBMIT HTML END");
-
-  console.log("🌐 AFTER SUBMIT URL:", page.url());
-  
+  console.log("✅ Login successful");
 }
 
 async function searchParts({ query, connection_id }) {
@@ -127,8 +67,7 @@ async function searchParts({ query, connection_id }) {
   await searchInput.fill('');
 
   // Type query like real user
- //   await searchInput.type(query, { delay: 50 });
-  await searchInput.type("wiper", { delay: 50 });
+  await searchInput.type(query, { delay: 50 });
 
   // Submit search
   await searchInput.press("Enter");
