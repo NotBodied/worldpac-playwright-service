@@ -61,7 +61,7 @@ async function ensureLoggedIn(page) {
   await page.waitForSelector('input', { timeout: 20000 });
 
   // Step 2: wait for actual login field
-//   await page.waitForSelector('#username', { timeout: 20000 });
+ //   await page.waitForSelector('#username', { timeout: 20000 });
 
   // Step 3: NOW define locators (only once)
   const userInput = page.locator('#username');
@@ -109,7 +109,13 @@ async function ensureLoggedIn(page) {
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
 
+  console.log("🚀 searchParts START");
+
+  console.log("🔍 About to ensure login...");
   await ensureLoggedIn(page);
+  console.log("✅ Login complete");
+
+  console.log("🔍 About to search...");
 
   console.log("🔍 Performing search...");
 
@@ -122,7 +128,7 @@ async function searchParts({ query, connection_id }) {
   await searchInput.fill('');
 
   // Type query like real user
-//   await searchInput.type(query, { delay: 50 });
+ //   await searchInput.type(query, { delay: 50 });
   await searchInput.type("wiper", { delay: 50 });
 
   // Submit search
@@ -221,7 +227,8 @@ async function searchParts({ query, connection_id }) {
   ); 
 
   console.log("🧾 PARSED PARTS:", cleanedParts);
-
+  console.log("🧾 Parsed parts count:", cleanedParts.length);
+  
   return cleanedParts;
 
 module.exports = { searchParts };
