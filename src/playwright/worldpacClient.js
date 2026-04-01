@@ -52,8 +52,7 @@ async function ensureLoggedIn(page) {
   }
 
   // Step: 5 - check if we're already logged in (crude check for demo)
-  console.log("🌐 LOGIN PAGE URL:", page.url());
-
+  
   console.log("🌐 Current URL:", page.url());
   console.log("⏳ Waiting for app to render login form...");
 
