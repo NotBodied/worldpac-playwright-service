@@ -231,6 +231,7 @@ async function searchParts({ query, connection_id }) {
   
   return cleanedParts || [];
 
-module.exports = { searchParts };
 
 }
+
+module.exports = { searchParts };
