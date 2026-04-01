@@ -7,6 +7,34 @@ async function ensureLoggedIn(page) {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
+  // 👇 STEP 1: small wait (let SPA load)
+  await page.waitForTimeout(3000);
+
+  // 👇 STEP 2: HTML dump
+  const html = await page.content();
+  console.log("🧾 LOGIN PAGE HTML START");
+  console.log(html.substring(0, 2000));
+  console.log("🧾 LOGIN PAGE HTML END");
+
+  // 👇 STEP 3: visible text
+  const visibleText = await page.evaluate(() => document.body.innerText);
+  console.log("🧾 LOGIN PAGE TEXT START");
+  console.log(visibleText.substring(0, 1000));
+  console.log("🧾 LOGIN PAGE TEXT END");
+
+  // 👇 STEP 4: enumerate inputs (THIS is what you asked about)
+  const inputs = await page.locator('input').all();
+
+  console.log("🧾 LOGIN INPUT COUNT:", inputs.length);
+
+  for (let i = 0; i < inputs.length; i++) {
+    const placeholder = await inputs[i].getAttribute('placeholder');
+    const name = await inputs[i].getAttribute('name');
+    console.log(`Login Input ${i}:`, { placeholder, name });
+  }
+
+  // Step: 5 - check if we're already logged in (crude check for demo)
+  console.log("🌐 LOGIN PAGE URL:", page.url());
 
   console.log("🌐 Current URL:", page.url());
   console.log("⏳ Waiting for app to render login form...");
@@ -15,7 +43,7 @@ async function ensureLoggedIn(page) {
   await page.waitForSelector('input', { timeout: 20000 });
 
   // Step 2: wait for actual login field
-  await page.waitForSelector('#username', { timeout: 20000 });
+//   await page.waitForSelector('#username', { timeout: 20000 });
 
   // Step 3: NOW define locators (only once)
   const userInput = page.locator('#username');
