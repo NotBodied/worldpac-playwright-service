@@ -229,7 +229,7 @@ async function searchParts({ query, connection_id }) {
   console.log("🧾 PARSED PARTS:", cleanedParts);
   console.log("🧾 Parsed parts count:", cleanedParts.length);
   
-  return cleanedParts;
+  return cleanedParts || [];
 
 module.exports = { searchParts };
 
