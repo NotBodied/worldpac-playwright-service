@@ -78,7 +78,7 @@ async function searchParts({ query, connection_id }) {
     timeout: 20000
   });
 
-  console.log("⏳ Waiting for results DOM...");
+  // console.log("⏳ Waiting for results DOM...");
 
   // Temporary wait for DOM to fully render (we will replace this later)
   // await page.waitForTimeout(5000);
@@ -87,31 +87,13 @@ async function searchParts({ query, connection_id }) {
   await page.screenshot({ path: "debug-results.png", fullPage: true });
 
   // 🌐 Debug URL
-  console.log("🌐 AFTER SEARCH URL:", page.url());;
+  //console.log("🌐 AFTER SEARCH URL:", page.url());;
 
-  
-  
-  console.log("🎯 PRODUCT CANDIDATES:");
-  console.dir(productCandidates, { depth: null });
 
-  // Wait until page text actually changes
-  console.log("⏳ Waiting for results DOM...");
 
   // Wait for ANY repeating structure (we’ll refine this)
   // await page.waitForTimeout(5000);
 
-  // Dump STRUCTURED DOM (not just text)
-  const domSnapshot = await page.evaluate(() => {
-    const elements = Array.from(document.querySelectorAll("*"))
-      .map(el => ({
-        tag: el.tagName,
-        class: el.className,
-        text: el.innerText?.slice(0, 100) || ""
-      }))
-      .filter(el => el.text.length > 20); // filter noise
-
-    return elements.slice(0, 200); // limit size
-  });
 
   // console.log("🧠 DOM SNAPSHOT:");
   // console.dir(domSnapshot, { depth: null });
