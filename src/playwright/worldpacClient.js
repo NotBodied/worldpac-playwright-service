@@ -72,16 +72,40 @@ async function searchParts({ query, connection_id }) {
   // Submit search
   await searchInput.press("Enter");
 
-  console.log("🔍 Waiting for results container...");
 
-  // Wait for results to load
-  console.log("⏳ Waiting for results (text-based)...");
+  console.log("⏳ Waiting for results DOM...");
+
+  // Temporary wait for DOM to fully render (we will replace this later)
+  await page.waitForTimeout(5000);
+
+  // 📸 Screenshot AFTER results load
+  await page.screenshot({ path: "debug-results.png", fullPage: true });
+
+  // 🌐 Debug URL
+  console.log("🌐 AFTER SEARCH URL:", page.url());;
 
   // Wait until page text actually changes
-  await page.waitForFunction(() => {
-    const text = document.body.innerText;
-    return text && text.length > 1000; // crude but effective
-  }, { timeout: 20000 });
+  console.log("⏳ Waiting for results DOM...");
+
+  // Wait for ANY repeating structure (we’ll refine this)
+  await page.waitForTimeout(5000);
+
+  // Dump STRUCTURED DOM (not just text)
+  const domSnapshot = await page.evaluate(() => {
+    const elements = Array.from(document.querySelectorAll("*"))
+      .map(el => ({
+        tag: el.tagName,
+        class: el.className,
+        text: el.innerText?.slice(0, 100) || ""
+      }))
+      .filter(el => el.text.length > 20); // filter noise
+
+    return elements.slice(0, 200); // limit size
+  });
+
+  console.log("🧠 DOM SNAPSHOT:");
+  console.dir(domSnapshot, { depth: null });
+
 
   // Small buffer
   await page.waitForTimeout(2000);
