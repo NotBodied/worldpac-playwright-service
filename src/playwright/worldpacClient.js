@@ -84,6 +84,25 @@ async function searchParts({ query, connection_id }) {
   // 🌐 Debug URL
   console.log("🌐 AFTER SEARCH URL:", page.url());;
 
+  // 🎯 TARGETED PRODUCT CARD DETECTION
+  const productCandidates = await page.evaluate(() => {
+    const allDivs = Array.from(document.querySelectorAll("div"));
+
+    return allDivs
+      .map(el => ({
+        class: el.className,
+        text: el.innerText?.slice(0, 200) || ""
+      }))
+      .filter(el =>
+        el.text.includes("Product ID") &&
+        el.text.includes("$")
+      )
+      .slice(0, 20);
+  });
+
+console.log("🎯 PRODUCT CANDIDATES:");
+console.dir(productCandidates, { depth: null });
+
   // Wait until page text actually changes
   console.log("⏳ Waiting for results DOM...");
 
@@ -103,8 +122,8 @@ async function searchParts({ query, connection_id }) {
     return elements.slice(0, 200); // limit size
   });
 
-  console.log("🧠 DOM SNAPSHOT:");
-  console.dir(domSnapshot, { depth: null });
+  // console.log("🧠 DOM SNAPSHOT:");
+  // console.dir(domSnapshot, { depth: null });
 
 
   // Small buffer
