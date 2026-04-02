@@ -129,30 +129,49 @@ console.dir(productCandidates, { depth: null });
   // Small buffer
   await page.waitForTimeout(2000);
 
-  const html = await page.content();
-   console.log("🧾 SEARCH RESULTS HTML START");
-   console.log(html.substring(0, 2000));
-   console.log("🧾 SEARCH RESULTS HTML END");
+  console.log("🧠 Extracting via DOM...");
 
-  const visibleText = await page.evaluate(() => document.body.innerText);
-   console.log("🧾 PAGE TEXT START");
-   console.log(visibleText.substring(0, 2000));
-   console.log("🧾 PAGE TEXT END");
+  // 🎯 Locate product cards
+  const productCards = page.locator('.mobile-card.product-quote-mobile');
 
-   
+  // Wait for at least one card (REAL wait condition now)
+  await productCards.first().waitFor({ timeout: 15000 });
 
-   console.log("🌐 AFTER SEARCH URL:", page.url());
-
-   console.log("🔍 Searching:", query);
-
-   //   return [{ debug: "search executed" }];
-
-     const lines = visibleText
-    .split("\n")
-    .map(l => l.trim())
-    .filter(Boolean);
+  const count = await productCards.count();
+  console.log(`📦 Found ${count} product cards`);
 
   const parts = [];
+
+  for (let i = 0; i < count; i++) {
+    const card = productCards.nth(i);
+
+    try {
+      const text = await card.innerText();
+
+      // Extract fields safely using patterns
+      const partNumberMatch = text.match(/Product ID:\s*(.+)/);
+      const mfrMatch = text.match(/MFR ID:\s*(.+)/);
+      const priceMatch = text.match(/\$(\d+(\.\d+)?)/);
+
+      // Description = first line
+      const description = text.split("\n")[0]?.trim() || null;
+
+      parts.push({
+        description,
+        part_number: partNumberMatch?.[1]?.trim() || null,
+        brand: mfrMatch?.[1]?.trim() || null,
+        price: priceMatch?.[1] || null,
+      });
+
+    } catch (err) {
+      console.log(`⚠️ Error parsing card ${i}:`, err.message);
+    }
+  }
+
+  console.log("🧾 DOM PARSED PARTS:", parts);
+  console.log("🧾 Parsed parts count:", parts.length);
+
+  return parts;
 
   let currentPart = null;
 
