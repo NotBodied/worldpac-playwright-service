@@ -10,41 +10,32 @@ async function ensureLoggedIn(page) {
   });
 
   // 2. Let SPA load
-  await page.waitForTimeout(3000);
+  // Wait for either login OR search input
+  await Promise.race([
+    page.locator('input[name="searchTerm"]').waitFor({ timeout: 10000 }).catch(() => {}),
+    page.locator('#username').waitFor({ timeout: 10000 }).catch(() => {})
+  ]);
 
   // 3. Check if already logged in
-  const isLoggedIn = await page.locator('input[name="searchTerm"]')
-    .isVisible()
-    .catch(() => false);
+  const isLoggedIn = await page.locator('input[name="searchTerm"]').count() > 0;
 
-  if (isLoggedIn) {
-    console.log("✅ Already logged in");
-    return;
+  if (!isLoggedIn) {
+    console.log("🔑 Logging in...");
+
+    const userInput = page.locator('#username');
+
+    await userInput.waitFor({ timeout: 15000 });
+
+    await userInput.fill(process.env.WORLDPAC_USERNAME);
+    await page.locator('input[type="password"]').fill(process.env.WORLDPAC_PASSWORD);
+    await page.locator('button[type="submit"]').click();
+
+    await page.locator('input[name="searchTerm"]').waitFor({ timeout: 15000 });
+
+    console.log("✅ Login successful");
+
   }
-
-  // 4. Perform login
-  console.log("🔑 Logging in...");
-
-  const userInput = page.locator('#username');
-  const passwordInput = page.locator('input[type="password"]');
-  const submitButton = page.locator('button[type="submit"]');
-
-  // Wait for login form
-  await userInput.waitFor({ timeout: 15000 });
-
-  // Fill credentials
-  await userInput.fill(process.env.WORLDPAC_USERNAME);
-  await passwordInput.fill(process.env.WORLDPAC_PASSWORD);
-
-  // Submit
-  await submitButton.click();
-
-  // 5. Wait for success signal
-  await page.waitForSelector('input[name="searchTerm"]', { timeout: 15000 });
-
-  console.log("✅ Login successful");
 }
-
 async function searchParts({ query, connection_id }) {
   const { page } = await getSession(connection_id);
 
@@ -119,8 +110,8 @@ async function searchParts({ query, connection_id }) {
     const card = productCards.nth(i);
 
   // identify child elements (debug)
-  const html = await card.innerHTML();
-  console.log(`🧩 CARD ${i} HTML:`, html.slice(0, 500));  
+  //const html = await card.innerHTML();
+  //console.log(`🧩 CARD ${i} HTML:`, html.slice(0, 500));  
 
   const brandEl = await card.locator('.sd-brand-image').first();
 
