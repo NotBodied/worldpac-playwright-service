@@ -118,6 +118,10 @@ async function searchParts({ query, connection_id }) {
   for (let i = 0; i < count; i++) {
     const card = productCards.nth(i);
 
+  // identify child elements (debug)
+  const html = await card.innerHTML();
+  console.log(`🧩 CARD ${i} HTML:`, html.slice(0, 500));  
+
     try {
       const text = await card.innerText();
 
@@ -128,7 +132,7 @@ async function searchParts({ query, connection_id }) {
       
       // ✅ NEW
       const availabilityMatch = text.match(/Qty:(\d+)/);
-      const locationMatch = text.match(/MD\s+[A-Za-z]+/);
+      const locationMatch = text.match(/[A-Z]{2}\s+[A-Za-z]+/);
       // Description = first line
       const description = text.split("\n")[0]?.trim() || null;
 
