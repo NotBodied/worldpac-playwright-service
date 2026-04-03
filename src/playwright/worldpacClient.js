@@ -147,7 +147,7 @@ async function searchParts({ query, connection_id }) {
 
         // ✅ NEW FIELDS
         availability: availabilityMatch?.[1] || null,
-        location: locationMatch?.[0] || null,
+        location,
 
         brand, // ✅ NEW (real brand, not fake)
       });
