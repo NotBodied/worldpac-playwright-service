@@ -122,6 +122,14 @@ async function searchParts({ query, connection_id }) {
   const html = await card.innerHTML();
   console.log(`🧩 CARD ${i} HTML:`, html.slice(0, 500));  
 
+  const brandEl = await card.locator('.sd-brand-image').first();
+
+  let brand = null;
+
+  if (await brandEl.count()) {
+    brand = await brandEl.getAttribute('alt');
+  }
+
     try {
       const text = await card.innerText();
 
@@ -132,12 +140,16 @@ async function searchParts({ query, connection_id }) {
       
       // ✅ NEW
       const availabilityMatch = text.match(/Qty:(\d+)/);
-      const locationMatch = text.match(/[A-Z]{2}\s+[A-Za-z]+/);
+      const locationLine = text
+        .split("\n")
+        .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
+
+      const location = locationLine ? locationLine.trim() : null;
       // Description = first line
       const description = text.split("\n")[0]?.trim() || null;
 
       parts.push({
-        description,
+        description, 
         part_number: partNumberMatch?.[1]?.trim() || null,
         mfr_id: mfrMatch?.[1]?.trim() || null,
         price: priceMatch?.[1] || null,
@@ -145,6 +157,8 @@ async function searchParts({ query, connection_id }) {
         // ✅ NEW FIELDS
         availability: availabilityMatch?.[1] || null,
         location: locationMatch?.[0] || null,
+
+        brand, // ✅ NEW (real brand, not fake)
       });
 
     } catch (err) {
