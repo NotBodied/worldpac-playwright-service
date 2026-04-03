@@ -108,7 +108,7 @@ async function searchParts({ query, connection_id }) {
     console.log("⚠️ Mobile layout not found, using fallback...");
     productCards = page.locator('div:has-text("Product ID")');
   }
-  
+
   // Wait for at least one card (REAL wait condition now)
   await productCards.first().waitFor({ timeout: 15000 });
 
@@ -135,49 +135,53 @@ async function searchParts({ query, connection_id }) {
     try {
       const text = await card.innerText();
 
-      // Extract fields safely using patterns
+      // ✅ Description (clean)
+      const description = text.split("\n")[0]?.trim() || null;
+
+      // ✅ Part Number
       const partEl = await card.locator('text=Product ID').first();
-
       let part_number = null;
-
       if (await partEl.count()) {
         const partText = await partEl.innerText();
-        part_number = partText.replace('Product ID:', '').trim();
-}     
-      const mfrMatch = text.match(/MFR ID:\s*(.+)/);
+        part_number = partText.split(':')[1]?.trim() || null;
+      }
+
+      // ✅ MFR ID
+      const mfrEl = await card.locator('text=MFR ID').first();
+      let mfr_id = null;
+      if (await mfrEl.count()) {
+       const mfrText = await mfrEl.innerText();
+       mfr_id = mfrText.split(':')[1]?.trim() || null;
+      }
+
+      // ✅ Price
       const priceEl = await card.locator('text=$').first();
-
       let price = null;
-
       if (await priceEl.count()) {
-        const priceText = await priceEl.innerText();
-        price = priceText.replace('$', '').trim();
-}      
-      // ✅ NEW
+       const priceText = await priceEl.innerText();
+       price = priceText.replace('$', '').trim();
+      }
+
+      // ✅ Availability (temporary regex)
       const availabilityMatch = text.match(/Qty:(\d+)/);
+
+      // ✅ Location (temporary)
       const locationLine = text
-        .split("\n")
-        .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
+       .split("\n")
+       .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
 
       const location = locationLine ? locationLine.trim() : null;
-      // Description = first line
-      const descriptionEl = await card.locator('div').first();
-      const description = await descriptionEl.innerText();
 
       parts.push({
-        description, 
+        description,
         part_number,
-        mfr_id: mfrMatch?.[1]?.trim() || null,
+        mfr_id,
         price,
-
-        // ✅ NEW FIELDS
         availability: availabilityMatch?.[1] || null,
         location,
-        brand, // ✅ NEW (real brand, not fake)
-      });
-
-    } catch (err) {
-      console.log(`⚠️ Error parsing card ${i}:`, err.message);
+        brand,
+      });} catch (err) {
+          console.log(`⚠️ Error parsing card ${i}:`, err.message);
     }
   }
 
