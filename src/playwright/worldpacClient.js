@@ -63,11 +63,17 @@ async function searchParts({ query, connection_id }) {
   // Submit search
   await searchInput.press("Enter");
 
-  console.log("⏳ Waiting for product cards...");
+  console.log("⏳ Waiting for product cards (multi-layout)...");
 
-  await page.locator('.mobile-card.product-quote-mobile').first().waitFor({
-    timeout: 20000
-  });
+  const mobileCards = page.locator('.mobile-card.product-quote-mobile');
+
+    // fallback selector
+  const fallbackCards = page.locator('div:has-text("Product ID")');
+
+  await Promise.race([
+    mobileCards.first().waitFor({ timeout: 15000 }).catch(() => {}),
+    fallbackCards.first().waitFor({ timeout: 15000 }).catch(() => {})
+  ]);
 
   // console.log("⏳ Waiting for results DOM...");
 
@@ -96,8 +102,13 @@ async function searchParts({ query, connection_id }) {
   console.log("🧠 Extracting via DOM...");
 
   // 🎯 Locate product cards
-  const productCards = page.locator('.mobile-card.product-quote-mobile');
+  let productCards = page.locator('.mobile-card.product-quote-mobile');
 
+  if (await productCards.count() === 0) {
+    console.log("⚠️ Mobile layout not found, using fallback...");
+    productCards = page.locator('div:has-text("Product ID")');
+  }
+  
   // Wait for at least one card (REAL wait condition now)
   await productCards.first().waitFor({ timeout: 15000 });
 
@@ -155,14 +166,13 @@ async function searchParts({ query, connection_id }) {
 
       parts.push({
         description, 
-        part_number: partNumberMatch?.[1]?.trim() || null,
+        part_number,
         mfr_id: mfrMatch?.[1]?.trim() || null,
-        price: priceMatch?.[1] || null,
+        price,
 
         // ✅ NEW FIELDS
         availability: availabilityMatch?.[1] || null,
         location,
-
         brand, // ✅ NEW (real brand, not fake)
       });
 
