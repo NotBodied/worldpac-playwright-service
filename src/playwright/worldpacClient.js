@@ -125,10 +125,23 @@ async function searchParts({ query, connection_id }) {
       const text = await card.innerText();
 
       // Extract fields safely using patterns
-      const partNumberMatch = text.match(/Product ID:\s*(.+)/);
+      const partEl = await card.locator('text=Product ID').first();
+
+      let part_number = null;
+
+      if (await partEl.count()) {
+        const partText = await partEl.innerText();
+        part_number = partText.replace('Product ID:', '').trim();
+}     
       const mfrMatch = text.match(/MFR ID:\s*(.+)/);
-      const priceMatch = text.match(/\$(\d+(\.\d+)?)/);
-      
+      const priceEl = await card.locator('text=$').first();
+
+      let price = null;
+
+      if (await priceEl.count()) {
+        const priceText = await priceEl.innerText();
+        price = priceText.replace('$', '').trim();
+}      
       // ✅ NEW
       const availabilityMatch = text.match(/Qty:(\d+)/);
       const locationLine = text
@@ -137,7 +150,8 @@ async function searchParts({ query, connection_id }) {
 
       const location = locationLine ? locationLine.trim() : null;
       // Description = first line
-      const description = text.split("\n")[0]?.trim() || null;
+      const descriptionEl = await card.locator('div').first();
+      const description = await descriptionEl.innerText();
 
       parts.push({
         description, 
