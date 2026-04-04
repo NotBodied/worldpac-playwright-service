@@ -125,93 +125,72 @@ async function searchParts({ query, connection_id }) {
     const text = await card.innerText();
 
     // Split into individual products
-    const lines = text.split("\n");
+     // 🔍 Find rows inside the card
+    const rows = card.locator('div:has-text("Product ID")');
 
-    // Detect description lines (start of product)
-    const productChunks = [];
-    let currentChunk = [];
+    const rowCount = await rows.count();
 
-    for (const line of lines) {
-      const isDescriptionLine =
-        !line.includes("Product ID") &&
-        !line.includes("MFR ID") &&
-        !line.includes("Qty") &&
-        !line.includes("$") &&
-        line.trim().length > 5;
+    for (let r = 0; r < rowCount; r++) {
+     const row = rows.nth(r);
 
-      if (isDescriptionLine && currentChunk.length > 0) {
-        productChunks.push(currentChunk.join("\n"));
-       currentChunk = [];
-     }
+     const rowText = await row.innerText();
 
-      currentChunk.push(line);
-    }
+     // ✅ Description (first line ABOVE Product ID)
+     let description = rowText.split("\n")[0]?.trim() || null;
 
-    if (currentChunk.length > 0) {
-      productChunks.push(currentChunk.join("\n"));
-    }
-
-    for (const chunk of productChunks) {
-
-      // ✅ Brand (still from card)
-      const brandEl = await card.locator('.sd-brand-image').first();
-     let brand = null;
-      if (await brandEl.count()) {
-        brand = await brandEl.getAttribute('alt');
-      }
-
-    let description = chunk.split("\n")[0]?.trim() || null;
-      
-
-     let part_number = null;
+     // ✅ Part Number
+      let part_number = null;
      let normalized_part_number = null;
-     let mfr_id = null;
-      let price = null;
 
-      // ✅ Part Number
-     const partLine = chunk.split("\n").find(line => line.includes("Product ID"));
+     const partLine = rowText.split("\n").find(l => l.includes("Product ID"));
      if (partLine) {
-        const raw_part_number = partLine.split(':')[1]?.trim() || null;
-       part_number = raw_part_number;
-
-       if (raw_part_number) {
-         normalized_part_number = raw_part_number.replace(/\s+/g, '');
-       }
-     }
-
-      // ✅ MFR ID
-     const mfrLine = chunk.split("\n").find(line => line.includes("MFR ID"));
-     if (mfrLine) {
-       mfr_id = mfrLine.split(':')[1]?.trim() || null;
+        const raw = partLine.split(":")[1]?.trim();
+        part_number = raw;
+        if (raw) normalized_part_number = raw.replace(/\s+/g, '');
       }
 
-     // ✅ Price (still DOM-based)
-     const priceEl = await card.locator('text=$').first();
+       // ✅ MFR
+      let mfr_id = null;
+      const mfrLine = rowText.split("\n").find(l => l.includes("MFR ID"));
+     if (mfrLine) {
+        mfr_id = mfrLine.split(":")[1]?.trim();
+     }
+
+     // ✅ Price (scoped to row, not card)
+     let price = null;
+     const priceEl = row.locator('text=$').first();
      if (await priceEl.count()) {
-       const priceText = await priceEl.innerText();
-       price = priceText.replace('$', '').trim();
+        const priceText = await priceEl.innerText();
+        price = priceText.replace('$', '').trim();
       }
 
       // ✅ Availability
-      const availabilityMatch = chunk.match(/Qty:(\d+)/);
+     const availabilityMatch = rowText.match(/Qty:(\d+)/);
 
       // ✅ Location
-     const locationLine = chunk
+     const locationLine = rowText
        .split("\n")
        .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
 
      const location = locationLine ? locationLine.trim() : null;
 
-     if (!part_number) continue;
+     // ✅ Brand (still from card)
+      const brandEl = await card.locator('.sd-brand-image').first();
+     let brand = null;
+     if (await brandEl.count()) {
+       brand = await brandEl.getAttribute('alt');
+     }
+
+      if (!part_number) continue;
 
       parts.push({
        description,
-        part_number,
-        normalized_part_number,
+       part_number,
+       normalized_part_number,
         mfr_id,
         price,
         availability: availabilityMatch?.[1] || null,
-        location,
+       location,
         brand,
       });
     }
