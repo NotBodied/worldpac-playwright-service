@@ -124,67 +124,70 @@ async function searchParts({ query, connection_id }) {
   try {
     const text = await card.innerText();
 
-    // ✅ Brand
-    const brandEl = await card.locator('.sd-brand-image').first();
-    let brand = null;
-    if (await brandEl.count()) {
-      brand = await brandEl.getAttribute('alt');
-    }
+    // Split into individual products
+    const productChunks = text.split(/(?=Product ID:)/g);
 
-    let description = null;
-    let part_number = null;
-    let normalized_part_number = null; // ✅ ADD THIS
-    let mfr_id = null;
-    let price = null;
+    for (const chunk of productChunks) {
 
-    // ✅ Description
-    description = text.split("\n")[0]?.trim() || null;
-
-    // ✅ Part Number
-    const partLine = text.split("\n").find(line => line.includes("Product ID"));
-    if (partLine) {
-      const raw_part_number = partLine.split(':')[1]?.trim() || null;
-
-      part_number = raw_part_number;
-
-      if (raw_part_number) {
-       normalized_part_number = raw_part_number.replace(/\s+/g, '');
+      // ✅ Brand (still from card)
+      const brandEl = await card.locator('.sd-brand-image').first();
+     let brand = null;
+      if (await brandEl.count()) {
+        brand = await brandEl.getAttribute('alt');
       }
+
+     let description = chunk.split("\n")[0]?.trim() || null;
+
+     let part_number = null;
+     let normalized_part_number = null;
+     let mfr_id = null;
+      let price = null;
+
+      // ✅ Part Number
+     const partLine = chunk.split("\n").find(line => line.includes("Product ID"));
+     if (partLine) {
+        const raw_part_number = partLine.split(':')[1]?.trim() || null;
+       part_number = raw_part_number;
+
+       if (raw_part_number) {
+         normalized_part_number = raw_part_number.replace(/\s+/g, '');
+       }
+     }
+
+      // ✅ MFR ID
+     const mfrLine = chunk.split("\n").find(line => line.includes("MFR ID"));
+     if (mfrLine) {
+       mfr_id = mfrLine.split(':')[1]?.trim() || null;
+      }
+
+     // ✅ Price (still DOM-based)
+     const priceEl = await card.locator('text=$').first();
+     if (await priceEl.count()) {
+       const priceText = await priceEl.innerText();
+       price = priceText.replace('$', '').trim();
+      }
+
+      // ✅ Availability
+      const availabilityMatch = chunk.match(/Qty:(\d+)/);
+
+      // ✅ Location
+     const locationLine = chunk
+       .split("\n")
+       .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
+
+     const location = locationLine ? locationLine.trim() : null;
+
+      parts.push({
+       description,
+        part_number,
+        normalized_part_number,
+        mfr_id,
+        price,
+        availability: availabilityMatch?.[1] || null,
+        location,
+        brand,
+      });
     }
-
-    // ✅ MFR ID
-    const mfrLine = text.split("\n").find(line => line.includes("MFR ID"));
-    if (mfrLine) {
-      mfr_id = mfrLine.split(':')[1]?.trim() || null;
-    }
-
-    // ✅ Price
-    const priceEl = await card.locator('text=$').first();
-    if (await priceEl.count()) {
-      const priceText = await priceEl.innerText();
-      price = priceText.replace('$', '').trim();
-    }
-
-    // ✅ Availability
-    const availabilityMatch = text.match(/Qty:(\d+)/);
-
-    // ✅ Location
-    const locationLine = text
-      .split("\n")
-      .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
-
-    const location = locationLine ? locationLine.trim() : null;
-
-    parts.push({
-      description,
-      part_number,              // original (display)
-      normalized_part_number,   // for matching/search
-      mfr_id,
-      price,
-      availability: availabilityMatch?.[1] || null,
-      location,
-      brand,
-    });
 
   } catch (err) {
     console.log(`⚠️ Error parsing card ${i}:`, err.message);
