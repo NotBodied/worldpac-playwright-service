@@ -162,15 +162,14 @@ async function searchParts({ query, connection_id }) {
       }
 
       // ✅ Price
-      let part_number = null;
+      const priceEl = await card.locator('text=$').first();
 
-      const partLine = text
-      .split("\n")
-      .find(line => line.includes("Product ID"));
+      let price = null;
 
-      if (partLine) {
-      part_number = partLine.split(':')[1]?.trim() || null;
-      }
+      if (await priceEl.count()) {
+        const priceText = await priceEl.innerText();
+        price = priceText.replace('$', '').trim();
+}
 
       // ✅ Availability (temporary regex)
       const availabilityMatch = text.match(/Qty:(\d+)/);
