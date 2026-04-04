@@ -102,6 +102,7 @@ async function searchParts({ query, connection_id }) {
   console.log("🧠 Extracting via DOM...");
 
   // 🎯 Locate product cards
+  const isMobileLayout = await page.locator('.mobile-card.product-quote-mobile').count() > 0;
   let productCards = page.locator('.mobile-card.product-quote-mobile');
 
   if (await productCards.count() === 0) {
@@ -118,81 +119,70 @@ async function searchParts({ query, connection_id }) {
   const parts = [];
 
   for (let i = 0; i < count; i++) {
-    const card = productCards.nth(i);
+  const card = productCards.nth(i);
 
-  // identify child elements (debug)
-  //const html = await card.innerHTML();
-  //console.log(`🧩 CARD ${i} HTML:`, html.slice(0, 500));  
+  try {
+    const text = await card.innerText();
 
-  const brandEl = await card.locator('.sd-brand-image').first();
-
-  let brand = null;
-
-  if (await brandEl.count()) {
-    brand = await brandEl.getAttribute('alt');
-  }
-
-    try {
-      const text = await card.innerText();
-
-      // ✅ Description (clean)
-      const description = text.split("\n")[0]?.trim() || null;
-
-      // ✅ Part Number
-      // ✅ Part Number (fallback-safe)
-      let part_number = null;
-
-      const partLine = text
-        .split("\n")
-        .find(line => line.includes("Product ID"));
-
-      if (partLine) {
-       part_number = partLine.split(':')[1]?.trim() || null;
-      }
-
-      // ✅ MFR ID
-      let mfr_id = null;
-
-      const mfrLine = text
-      .split("\n")
-      .find(line => line.includes("MFR ID"));
-
-       if (mfrLine) {
-        mfr_id = mfrLine.split(':')[1]?.trim() || null;
-      }
-
-      // ✅ Price
-      const priceEl = await card.locator('text=$').first();
-
-      let price = null;
-
-      if (await priceEl.count()) {
-        const priceText = await priceEl.innerText();
-        price = priceText.replace('$', '').trim();
-}
-
-      // ✅ Availability (temporary regex)
-      const availabilityMatch = text.match(/Qty:(\d+)/);
-
-      // ✅ Location (temporary)
-      const locationLine = text
-       .split("\n")
-       .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
-
-      const location = locationLine ? locationLine.trim() : null;
-
-      parts.push({
-        description,
-        part_number,
-        mfr_id,
-        price,
-        availability: availabilityMatch?.[1] || null,
-        location,
-        brand,
-      });} catch (err) {
-          console.log(`⚠️ Error parsing card ${i}:`, err.message);
+    // ✅ Brand
+    const brandEl = await card.locator('.sd-brand-image').first();
+    let brand = null;
+    if (await brandEl.count()) {
+      brand = await brandEl.getAttribute('alt');
     }
+
+    let description = null;
+    let part_number = null;
+    let mfr_id = null;
+    let price = null;
+
+    // ✅ Description
+    description = text.split("\n")[0]?.trim() || null;
+
+    // ✅ Part Number
+    const partLine = text.split("\n").find(line => line.includes("Product ID"));
+    if (partLine) {
+      part_number = partLine.split(':')[1]?.trim() || null;
+      if (part_number) part_number = part_number.replace(/\s+/g, '');
+    }
+
+    // ✅ MFR ID
+    const mfrLine = text.split("\n").find(line => line.includes("MFR ID"));
+    if (mfrLine) {
+      mfr_id = mfrLine.split(':')[1]?.trim() || null;
+    }
+
+    // ✅ Price
+    const priceEl = await card.locator('text=$').first();
+    if (await priceEl.count()) {
+      const priceText = await priceEl.innerText();
+      price = priceText.replace('$', '').trim();
+    }
+
+    // ✅ Availability
+    const availabilityMatch = text.match(/Qty:(\d+)/);
+
+    // ✅ Location
+    const locationLine = text
+      .split("\n")
+      .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
+
+    const location = locationLine ? locationLine.trim() : null;
+
+    parts.push({
+      description,
+      part_number,
+      mfr_id,
+      price,
+      availability: availabilityMatch?.[1] || null,
+      location,
+      brand,
+    });
+
+  } catch (err) {
+    console.log(`⚠️ Error parsing card ${i}:`, err.message);
   }
+}
 
   console.log("🧾 DOM PARSED PARTS:", parts);
   console.log("🧾 Parsed parts count:", parts.length);
