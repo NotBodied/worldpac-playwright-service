@@ -133,6 +133,7 @@ async function searchParts({ query, connection_id }) {
 
     let description = null;
     let part_number = null;
+    let normalized_part_number = null; // ✅ ADD THIS
     let mfr_id = null;
     let price = null;
 
@@ -142,11 +143,9 @@ async function searchParts({ query, connection_id }) {
     // ✅ Part Number
     const partLine = text.split("\n").find(line => line.includes("Product ID"));
     if (partLine) {
-      let raw_part_number = partLine.split(':')[1]?.trim() || null;
+      const raw_part_number = partLine.split(':')[1]?.trim() || null;
 
-      let part_number = raw_part_number;
-
-      let normalized_part_number = null;
+      part_number = raw_part_number;
 
       if (raw_part_number) {
        normalized_part_number = raw_part_number.replace(/\s+/g, '');
