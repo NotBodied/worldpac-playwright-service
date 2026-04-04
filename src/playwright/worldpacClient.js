@@ -107,7 +107,7 @@ async function searchParts({ query, connection_id }) {
 
   if (await productCards.count() === 0) {
     console.log("⚠️ Mobile layout not found, using fallback...");
-    productCards = page.locator('div:has-text("Product ID")');
+    productCards = page.locator('div:has-text("Product ID"):has-text("$")');
   }
 
   // Wait for at least one card (REAL wait condition now)
@@ -142,8 +142,15 @@ async function searchParts({ query, connection_id }) {
     // ✅ Part Number
     const partLine = text.split("\n").find(line => line.includes("Product ID"));
     if (partLine) {
-      part_number = partLine.split(':')[1]?.trim() || null;
-      if (part_number) part_number = part_number.replace(/\s+/g, '');
+      let raw_part_number = partLine.split(':')[1]?.trim() || null;
+
+      let part_number = raw_part_number;
+
+      let normalized_part_number = null;
+
+      if (raw_part_number) {
+       normalized_part_number = raw_part_number.replace(/\s+/g, '');
+      }
     }
 
     // ✅ MFR ID
@@ -171,7 +178,8 @@ async function searchParts({ query, connection_id }) {
 
     parts.push({
       description,
-      part_number,
+      part_number,              // original (display)
+      normalized_part_number,   // for matching/search
       mfr_id,
       price,
       availability: availabilityMatch?.[1] || null,
