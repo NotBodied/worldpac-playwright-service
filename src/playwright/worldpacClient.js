@@ -161,7 +161,7 @@ async function searchParts({ query, connection_id }) {
       }
 
     let description = chunk.split("\n")[0]?.trim() || null;
-      ?.trim() || null;
+      
 
      let part_number = null;
      let normalized_part_number = null;
