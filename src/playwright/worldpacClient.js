@@ -125,7 +125,24 @@ async function searchParts({ query, connection_id }) {
     const text = await card.innerText();
 
     // Split into individual products
-    const productChunks = text.split(/(?=Product ID:)/g);
+    const lines = text.split("\n");
+
+    // Build full product blocks
+    const productChunks = [];
+    let currentChunk = [];
+
+    for (const line of lines) {
+      if (line.includes("Product ID") && currentChunk.length > 0) {
+       productChunks.push(currentChunk.join("\n"));
+       currentChunk = [];
+      }
+       currentChunk.push(line);
+    }
+
+    // push last chunk
+    if (currentChunk.length > 0) {
+  productChunks.push(currentChunk.join("\n"));
+    }
 
     for (const chunk of productChunks) {
 
@@ -136,7 +153,10 @@ async function searchParts({ query, connection_id }) {
         brand = await brandEl.getAttribute('alt');
       }
 
-     let description = chunk.split("\n")[0]?.trim() || null;
+    let description = chunk
+      .split("\n")
+      .find(line => !line.includes("Product ID") && !line.includes("MFR ID"))
+      ?.trim() || null;
 
      let part_number = null;
      let normalized_part_number = null;
