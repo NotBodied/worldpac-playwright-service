@@ -68,7 +68,7 @@ async function searchParts({ query, connection_id }) {
   const mobileCards = page.locator('.mobile-card.product-quote-mobile');
 
     // fallback selector
-  const fallbackCards = page.locator('div:has-text("Product ID")');
+  const fallbackCards = page.locator('div:has-text("Product ID"):has-text("$")');
 
   await Promise.race([
     mobileCards.first().waitFor({ timeout: 15000 }).catch(() => {}),
@@ -139,27 +139,37 @@ async function searchParts({ query, connection_id }) {
       const description = text.split("\n")[0]?.trim() || null;
 
       // ✅ Part Number
-      const partEl = await card.locator('text=Product ID').first();
+      // ✅ Part Number (fallback-safe)
       let part_number = null;
-      if (await partEl.count()) {
-        const partText = await partEl.innerText();
-        part_number = partText.split(':')[1]?.trim() || null;
+
+      const partLine = text
+        .split("\n")
+        .find(line => line.includes("Product ID"));
+
+      if (partLine) {
+       part_number = partLine.split(':')[1]?.trim() || null;
       }
 
       // ✅ MFR ID
-      const mfrEl = await card.locator('text=MFR ID').first();
       let mfr_id = null;
-      if (await mfrEl.count()) {
-       const mfrText = await mfrEl.innerText();
-       mfr_id = mfrText.split(':')[1]?.trim() || null;
+
+      const mfrLine = text
+      .split("\n")
+      .find(line => line.includes("MFR ID"));
+
+       if (mfrLine) {
+        mfr_id = mfrLine.split(':')[1]?.trim() || null;
       }
 
       // ✅ Price
-      const priceEl = await card.locator('text=$').first();
-      let price = null;
-      if (await priceEl.count()) {
-       const priceText = await priceEl.innerText();
-       price = priceText.replace('$', '').trim();
+      let part_number = null;
+
+      const partLine = text
+      .split("\n")
+      .find(line => line.includes("Product ID"));
+
+      if (partLine) {
+      part_number = partLine.split(':')[1]?.trim() || null;
       }
 
       // ✅ Availability (temporary regex)
