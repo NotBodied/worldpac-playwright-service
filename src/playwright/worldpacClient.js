@@ -127,21 +127,28 @@ async function searchParts({ query, connection_id }) {
     // Split into individual products
     const lines = text.split("\n");
 
-    // Build full product blocks
+    // Detect description lines (start of product)
     const productChunks = [];
     let currentChunk = [];
 
     for (const line of lines) {
-      if (line.includes("Product ID") && currentChunk.length > 0) {
-       productChunks.push(currentChunk.join("\n"));
+      const isDescriptionLine =
+        !line.includes("Product ID") &&
+        !line.includes("MFR ID") &&
+        !line.includes("Qty") &&
+        !line.includes("$") &&
+        line.trim().length > 5;
+
+      if (isDescriptionLine && currentChunk.length > 0) {
+        productChunks.push(currentChunk.join("\n"));
        currentChunk = [];
-      }
-       currentChunk.push(line);
+     }
+
+      currentChunk.push(line);
     }
 
-    // push last chunk
     if (currentChunk.length > 0) {
-  productChunks.push(currentChunk.join("\n"));
+      productChunks.push(currentChunk.join("\n"));
     }
 
     for (const chunk of productChunks) {
@@ -153,9 +160,7 @@ async function searchParts({ query, connection_id }) {
         brand = await brandEl.getAttribute('alt');
       }
 
-    let description = chunk
-      .split("\n")
-      .find(line => !line.includes("Product ID") && !line.includes("MFR ID"))
+    let description = chunk.split("\n")[0]?.trim() || null;
       ?.trim() || null;
 
      let part_number = null;
@@ -196,6 +201,8 @@ async function searchParts({ query, connection_id }) {
        .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
 
      const location = locationLine ? locationLine.trim() : null;
+
+     if (!part_number) continue;
 
       parts.push({
        description,
