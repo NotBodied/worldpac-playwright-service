@@ -65,9 +65,9 @@ async function searchParts({ query, connection_id }) {
 
   console.log("⏳ Waiting for product cards (multi-layout)...");
 
-  const mobileCards = page.locator('.mobile-card.product-quote-mobile');
 
     // fallback selector
+  const mobileCards = page.locator('.mobile-card.product-quote-mobile');
   const fallbackCards = page.locator('div:has-text("Product ID"):has-text("$")');
 
   await Promise.race([
@@ -101,152 +101,207 @@ async function searchParts({ query, connection_id }) {
 
   console.log("🧠 Extracting via DOM...");
 
-  // 🎯 Locate product cards
-  const isMobileLayout = await page.locator('.mobile-card.product-quote-mobile').count() > 0;
-  let productCards = page.locator('.mobile-card.product-quote-mobile');
-
-  if (await productCards.count() === 0) {
-    console.log("⚠️ Mobile layout not found, using fallback...");
-    productCards = page.locator('div:has-text("Product ID"):has-text("$")');
-  }
-
-  // Wait for at least one card (REAL wait condition now)
-  await productCards.first().waitFor({ timeout: 15000 });
-
-  const count = await productCards.count();
-  console.log(`📦 Found ${count} product cards`);
-
-  const parts = [];
-
-  for (let i = 0; i < count; i++) {
-  const card = productCards.nth(i);
-
-  try {
+    // Detect layout
     
-         // 🔍 Find rows inside the card
-    const rows = card.locator(':scope > div').filter({
-      hasText: 'Product ID'
-    });
+    const mobileCount = await mobileCards.count();
+    const fallbackCount = await fallbackCards.count();
 
-    const rowCount = await rows.count();
+    const isMobileLayout = mobileCount > fallbackCount;
+        let parts = [];
 
-    for (let r = 0; r < rowCount; r++) {
-  const row = rows.nth(r);
-  const container = row.locator('xpath=..');
-  const rowText = await row.innerText();
-
-  if (!rowText.includes("Product ID") || !rowText.includes("MFR ID")) {
-    continue;
-  }
-
-  // ✅ Description
-  let description = rowText
-  .split("\n")
-  .map(l => l.trim())
-  .find(line =>
-    line &&
-    !line.includes("Product ID") &&
-    !line.includes("MFR ID") &&
-    !line.includes("Qty") &&
-    !line.includes("$")
-  ) || null;
-
-  // ✅ Part Number
-  let part_number = null;
-  let normalized_part_number = null;
-
-  const partLine = rowText.split("\n").find(l => l.includes("Product ID"));
-  if (partLine) {
-    const raw = partLine.split(":")[1]?.trim();
-    part_number = raw;
-    if (raw) normalized_part_number = raw.replace(/\s+/g, '');
-  }
-
-  // ✅ MFR
-  let mfr_id = null;
-  const mfrLine = rowText.split("\n").find(l => l.includes("MFR ID"));
-  if (mfrLine) {
-    mfr_id = mfrLine.split(":")[1]?.trim();
-  }
-
-  // ✅ Price
-  let price = null;
-  const priceEl = container.locator(':scope >> text=/\\$\\d+\\.\\d+/').first();
-
-  if (await priceEl.count()) {
-    const priceText = await priceEl.innerText();
-    const match = priceText.match(/\$\d+\.\d+/);
-    if (match) {
-      price = match[0].replace('$', '');
+    if (isMobileLayout) {
+      console.log("📱 Using MOBILE extraction");
+      parts = await extractMobile(page);
+    } else {
+      console.log("🖥️ Using FALLBACK extraction");
+      parts = await extractFallback(page);
     }
-  }
 
-  // ✅ Availability
-  let availability = null;
-  const qtyEl = container.locator('text=Qty').first();
+    console.log("🧾 RAW PARTS:", parts);
 
-  if (await qtyEl.count()) {
-    const qtyText = await qtyEl.innerText();
-    const match = qtyText.match(/Qty:(\d+)/);
-    if (match) {
-      availability = match[1];
+    const uniqueParts = [];
+    const seen = new Set();
+
+      for (const p of parts) {
+      const key = `${p.part_number}-${p.description}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueParts.push(p);
+      }
+      }
+
+      return uniqueParts;
+
+        }
+
+    async function extractMobile(page) {
+      const cards = page.locator('.mobile-card.product-quote-mobile');
+      await cards.first().waitFor({ timeout: 15000 });
+
+      const count = await cards.count();
+      console.log(`📦 Mobile cards: ${count}`);
+
+      const parts = [];
+
+      for (let i = 0; i < count; i++) {
+        const card = cards.nth(i);
+
+        const rows = card.locator(':scope > div');
+        const rowCount = await rows.count();
+
+        for (let r = 0; r < rowCount; r++) {
+          const row = rows.nth(r);
+
+          try {
+            const hasProductId = await row.locator(':scope >> text=Product ID').count();
+            const hasMfrId = await row.locator(':scope >> text=MFR ID').count();
+
+            if (!hasProductId || !hasMfrId) continue;
+
+            const lines = row.locator(':scope >> div');
+            const lineCount = await lines.count();
+
+            let description = null;
+            let part_number = null;
+            let normalized_part_number = null;
+            let mfr_id = null;
+
+            for (let l = 0; l < lineCount; l++) {
+              const text = (await lines.nth(l).textContent())?.trim();
+              if (!text) continue;
+
+              if (text.startsWith("Product ID")) {
+                const val = text.split(":")[1]?.trim();
+                part_number = val;
+                if (val) normalized_part_number = val.replace(/\s+/g, '');
+              }
+
+              else if (text.startsWith("MFR ID")) {
+                mfr_id = text.split(":")[1]?.trim();
+              }
+
+              else if (!text.includes("Qty") && !text.includes("$")) {
+                if (!description) description = text;
+              }
+            }
+
+            // price
+            let price = null;
+            const priceEl = card.locator(':scope >> text=/\\$\\d+\\.\\d+/').first();
+            if (await priceEl.count()) {
+              const txt = await priceEl.textContent();
+              const match = txt?.match(/\$\d+\.\d+/);
+              if (match) price = match[0].replace('$', '');
+            }
+
+            // availability
+            let availability = null;
+            const qtyEl = card.locator('text=Qty').first();
+            if (await qtyEl.count()) {
+              const txt = await qtyEl.textContent();
+              const match = txt?.match(/Qty:(\d+)/);
+              if (match) availability = match[1];
+            }
+
+            // location
+            let location = null;
+            const locEl = card.locator('text=/\\b(MD|VA|PA)\\b/').first();
+            if (await locEl.count()) {
+              location = (await locEl.textContent())?.trim();
+            }
+
+            // brand
+            let brand = null;
+            const brandEl = card.locator('.sd-brand-image').first();
+            if (await brandEl.count()) {
+              brand = await brandEl.getAttribute('alt');
+            }
+
+            if (!part_number) continue;
+
+            parts.push({
+              description,
+              part_number,
+              normalized_part_number,
+              mfr_id,
+              price,
+              availability,
+              location,
+              brand,
+            });
+
+          } catch (err) {
+            console.log(`⚠️ Mobile parse error [${i}-${r}]`, err.message);
+          }
+        }
+      }
+
+    return parts;
+    } 
+
+    async function extractFallback(page) {
+      const cards = page.locator('div:has-text("Product ID"):has-text("$")');
+      await cards.first().waitFor({ timeout: 15000 });
+
+      const count = await cards.count();
+      console.log(`📦 Fallback cards: ${count}`);
+
+      const parts = [];
+
+        for (let i = 0; i < count; i++) {
+        const card = cards.nth(i);
+
+        try {
+          const text = await card.textContent();
+          if (!text.includes("Product ID")) continue;
+
+          const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+          let description = null;
+          let part_number = null;
+          let normalized_part_number = null;
+          let mfr_id = null;
+          let price = null;
+
+          for (const line of lines) {
+            if (line.startsWith("Product ID")) {
+              const val = line.split(":")[1]?.trim();
+              part_number = val;
+              if (val) normalized_part_number = val.replace(/\s+/g, '');
+            }
+
+            else if (line.startsWith("MFR ID")) {
+              mfr_id = line.split(":")[1]?.trim();
+            }
+
+            else if (line.includes("$")) {
+              const match = line.match(/\$\d+\.\d+/);
+              if (match) price = match[0].replace('$', '');
+            }
+
+            else if (!description) {
+              description = line;
+            }
+          }
+
+          if (!part_number) continue;
+
+          parts.push({
+            description,
+            part_number,
+            normalized_part_number,
+            mfr_id,
+            price,
+            availability: null,
+            location: null,
+            brand: null,
+          });
+
+        } catch (err) {
+          console.log(`⚠️ Fallback parse error [${i}]`, err.message);
+        }
+      }
+
+      return parts;
     }
-  }
-
-  // ✅ Location (FIXED — use container, NOT row)
-  let location = null;
-  const locationEl = container.locator('text=/\\b(MD|VA|PA)\\b/').first();
-
-  if (await locationEl.count()) {
-    location = (await locationEl.innerText()).trim();
-  }
-
-  // ✅ Brand
-  const brandEl = await card.locator('.sd-brand-image').first();
-  let brand = null;
-
-  if (await brandEl.count()) {
-    brand = await brandEl.getAttribute('alt');
-  }
-
-  if (!part_number) continue;
-
-  parts.push({
-    description,
-    part_number,
-    normalized_part_number,
-    mfr_id,
-    price,
-    availability,
-    location,
-    brand,
-  });
-}
-  }
-   catch (err) {
-    console.log(`⚠️ Error parsing card ${i}:`, err.message);
-  }
-}
-
-  console.log("🧾 DOM PARSED PARTS:", parts);
-  console.log("🧾 Parsed parts count:", parts.length);
-
-  const uniqueParts = [];
-  const seen = new Set();
-
-  for (const p of parts) {
-   const key = `${p.part_number}-${p.description}`;
-   if (!seen.has(key)) {
-     seen.add(key);
-     uniqueParts.push(p);
-   }
-  }
-
-  return uniqueParts;
-
-  
-
- 
-}
-
 module.exports = { searchParts };
