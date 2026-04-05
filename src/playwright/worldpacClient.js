@@ -252,7 +252,11 @@ async function searchParts({ query, connection_id }) {
     } 
 
     async function extractFallback(page) {
-      const cards = page.locator('div:has-text("Product ID"):has-text("$")');
+      const cards = page.locator('div').filter({
+        has: page.locator('text=Product ID'),
+      }).filter({
+        has: page.locator('text=Price'),
+      });
       await cards.first().waitFor({ timeout: 15000 });
 
       const count = await cards.count();
@@ -264,89 +268,72 @@ async function searchParts({ query, connection_id }) {
         const card = cards.nth(i);
 
         try {
-          let text = await card.textContent();
+          const rows = card.locator(':scope >> text=Product ID');
+          
+          const rowCount = await rows.count();
 
-           text = text
-             .replace(/Submit/gi, '')
-              .replace(/Clear/gi, '')
-             .replace(/List Price:\$\d+(\.\d+)?/gi, '')
-            .trim();
+          for (let r = 0; r < rowCount; r++) {
+            try {
+              const row = rows.nth(r).locator('..'); // go up to container
 
-          if (!text.includes("Product ID:")) continue;
+              const rowText = await row.textContent();
+              if (!rowText) continue;
 
-          console.log("🧾 CARD TEXT:", text);
+              console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
 
-          if (!text || text.length < 20) continue;
+              // --- FIELD EXTRACTION ---
 
-          // 🔥 Split into individual products
-          const productChunks = text.split(/(?=Product ID:)/);
-          for (const chunk of productChunks) {
-      try {
-        const productIdMatch = chunk.match(/Product ID:\s*([A-Za-z0-9\- ]+?)(?:\s|$)/);
-        const mfrMatch = chunk.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-        const priceMatch = chunk.match(/Price:\$?(\d+(\.\d+)?)/i);
-        const qtyMatch = chunk.match(/Qty:(\d+)/);
-        const locationMatch = chunk.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
+              const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+)/);
+              const mfrMatch = rowText.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+              const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
+              const qtyMatch = rowText.match(/Qty:(\d+)/);
+              const locationMatch = rowText.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
 
-        const part_number = productIdMatch?.[1]?.trim() || null;
+              const part_number = productIdMatch?.[1]?.trim() || null;
 
-       let normalized_part_number = part_number
-        ? part_number.replace(/\s+/g, '')
-        : null;
+              let normalized_part_number = part_number
+                ? part_number.replace(/\s+/g, '')
+                : null;
 
-      if (normalized_part_number) {
-         normalized_part_number = normalized_part_number
-          .replace(/MFRID.*/i, '')
-           .trim();
-      }
+              let mfr_id = mfrMatch?.[1] || null;
 
-      let mfr_id = mfrMatch?.[1] || null;
+              if (mfr_id) {
+                mfr_id = mfr_id.replace(/[^A-Za-z0-9\-].*/i, '').trim();
+              }
 
-      if (mfr_id) {
-        mfr_id = mfr_id
-          .replace(/[^A-Za-z0-9\-].*/i, '')
-          .trim();
-      }
-        const price = priceMatch ? Number(priceMatch[1]) : null;
-        const availability = qtyMatch ? Number(qtyMatch[1]) : null;
+              const price = priceMatch ? Number(priceMatch[1]) : null;
+              const availability = qtyMatch ? Number(qtyMatch[1]) : null;
 
-        let location = null;
- 
-      if (locationMatch) {
-       location = locationMatch[0]
-        .replace(/Qty:\d+\s*/, '')
-        .replace(/Submit.*/i, '')
-        .trim();
-      }
+              let location = null;
+              if (locationMatch) {
+                location = locationMatch[0]
+                  .replace(/Qty:\d+\s*/, '')
+                  .trim();
+              }
 
-        // 🚫 CRITICAL FILTER (this fixes 80% of your garbage)
-        if (
-          !part_number ||
-          part_number === "Product" ||
-          part_number.length < 3
-        ) continue;
+              if (!part_number || part_number.length < 3) continue;
 
-        parts.push({
-          description: null,
-          part_number,
-          normalized_part_number,
-          mfr_id,
-          price,
-          availability,
-          location,
-          brand: null,
-        });
+              parts.push({
+                description: null,
+                part_number,
+                normalized_part_number,
+                mfr_id,
+                price,
+                availability,
+                location,
+                brand: null,
+              });
 
+            } catch (err) {
+              console.log("⚠️ Row parse error:", err.message);
+            }
+          }
+
+      
       } catch (err) {
         console.log("⚠️ Chunk parse error:", err.message);
       }
     }
-
-        } catch (err) {
-          console.log(`⚠️ Fallback parse error [${i}]`, err.message);
-        }
-  }
-
   return parts;
 }
 
