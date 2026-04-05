@@ -292,7 +292,7 @@ async function searchParts({ query, connection_id }) {
           const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
           const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
           const qtyMatch = rowText.match(/Qty:(\d+)/);
-          const locationMatch = rowText.match(/Qty:\d+\s+([A-Z]{2}\s+[A-Za-z ]+)/);
+          const locationMatch = rowText.match(/Qty:\d+\s+(?:Special Order\s+)?([A-Z]{2}\s+[A-Za-z ]+)/);
 
           const part_number = productIdMatch?.[1]?.trim() || null;
 
