@@ -300,6 +300,10 @@ async function searchParts({ query, connection_id }) {
             ? part_number.replace(/[^A-Za-z0-9\-]/g, '')
             : null;
 
+            // ✅ DEFINE mfrEl (THIS IS WHAT YOU'RE MISSING)
+          let mfr_id = null;
+          const mfrEl = row.locator('text=MFR ID').first();
+
           if (await mfrEl.count()) {
               const mfrText = await mfrEl.textContent();
               const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
@@ -307,6 +311,7 @@ async function searchParts({ query, connection_id }) {
                 mfr_id = match[1].trim();
               }
             }
+
 
             if (!mfr_id) {
               mfr_id = part_number;
