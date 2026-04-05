@@ -224,9 +224,18 @@ async function searchParts({ query, connection_id }) {
 
             // brand
             let brand = null;
-            const brandEl = card.locator('.sd-brand-image').first();
+
+            const brandEl = row.locator('img[alt]');
             if (await brandEl.count()) {
-              brand = await brandEl.getAttribute('alt');
+              const alt = await brandEl.first().getAttribute('alt');
+
+              if (
+                alt &&
+                alt !== 'name' &&
+                !alt.toLowerCase().includes('image')
+              ) {
+                brand = alt;
+              }
             }
 
             if (!part_number) continue;
@@ -267,6 +276,7 @@ async function searchParts({ query, connection_id }) {
         try {
           const rowText = await row.textContent();
           if (!rowText) continue;
+          if (rowText.length > 500) continue;
 
           if (
             !rowText.includes("Product ID") ||
@@ -290,19 +300,19 @@ async function searchParts({ query, connection_id }) {
             ? part_number.replace(/[^A-Za-z0-9\-]/g, '')
             : null;
 
-          // ✅ MFR (DOM-based)
-          let mfr_id = null;
-          const mfrEl = row.locator('text=MFR ID').first();
-
           if (await mfrEl.count()) {
-            const mfrText = await mfrEl.textContent();
-            const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-            if (match) {
-              mfr_id = match[1].trim();
+              const mfrText = await mfrEl.textContent();
+              const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+              if (match) {
+                mfr_id = match[1].trim();
+              }
             }
-          }
 
-          const price = priceMatch ? Number(priceMatch[1]) : null;
+            if (!mfr_id) {
+              mfr_id = part_number;
+            }
+
+        const price = priceMatch ? Number(priceMatch[1]) : null;
           const availability = qtyMatch ? Number(qtyMatch[1]) : null;
 
           let location = null;
@@ -317,18 +327,36 @@ async function searchParts({ query, connection_id }) {
 
           // ✅ Description
           let description = null;
-          const descMatch = rowText.match(/(Window Wiper Blade[^]*?)Product ID:/);
-          if (descMatch) {
-            description = descMatch[0]
-              .replace("Product ID:", "")
-              .trim();
+
+          const lines = rowText.split('\n').map(l => l.trim()).filter(Boolean);
+
+          for (const line of lines) {
+            if (
+              !line.includes("Product ID") &&
+              !line.includes("MFR ID") &&
+              !line.includes("Price") &&
+              !line.includes("Qty") &&
+              line.length > 8 && !/^\d+$/.test(line)
+            ) {
+              description = line;
+              break;
+            }
           }
 
           // ✅ Brand
           let brand = null;
+
           const brandEl = row.locator('img[alt]');
           if (await brandEl.count()) {
-            brand = await brandEl.first().getAttribute('alt');
+            const alt = await brandEl.first().getAttribute('alt');
+
+            if (
+              alt &&
+              alt !== 'name' &&
+              !alt.toLowerCase().includes('image')
+            ) {
+              brand = alt;
+            }
           }
 
           parts.push({
