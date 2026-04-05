@@ -299,13 +299,15 @@ async function searchParts({ query, connection_id }) {
 
               let mfr_id = null;
 
-              const mfrRaw = rowText.split("MFR ID:")[1];
+              const mfrEl = row.locator('text=MFR ID').first();
 
-              if (mfrRaw) {
-                mfr_id = mfrRaw
-                  .split(/Price:|Qty:|Availability:/)[0] // stop at next field
-                  .replace(/[^A-Za-z0-9\-]/g, '') // strip EVERYTHING except valid chars
-                  .trim();
+              if (await mfrEl.count()) {
+                const mfrText = await mfrEl.textContent();
+
+                const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+                if (match) {
+                  mfr_id = match[1].trim();
+                }
               }
 
               const price = priceMatch ? Number(priceMatch[1]) : null;
@@ -321,15 +323,31 @@ async function searchParts({ query, connection_id }) {
 
               if (!part_number || part_number.length < 3) continue;
 
+              let description = null;
+
+              const descMatch = rowText.match(/^(.+?)Product ID:/);
+
+              if (descMatch) {
+                description = descMatch[1].trim();
+              }
+
+              let brand = null;
+
+              const brandEl = row.locator('img');
+
+              if (await brandEl.count()) {
+                brand = await brandEl.first().getAttribute('alt');
+              }
+
               parts.push({
-                description: null,
+                description,
                 part_number,
                 normalized_part_number,
                 mfr_id,
                 price,
                 availability,
                 location,
-                brand: null,
+                brand,
               });
 
             } catch (err) {
