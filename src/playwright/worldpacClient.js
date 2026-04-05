@@ -68,7 +68,11 @@ async function searchParts({ query, connection_id }) {
 
     // fallback selector
   const mobileCards = page.locator('.mobile-card.product-quote-mobile');
-  const fallbackCards = page.locator('div:has-text("Product ID"):has-text("$")');
+  const fallbackCards = page.locator('div').filter({
+      has: page.locator('text=Product ID'),
+    }).filter({
+      has: page.locator('text=Price'),
+    });
 
   await Promise.race([
     mobileCards.first().waitFor({ timeout: 15000 }).catch(() => {}),
@@ -139,6 +143,14 @@ async function searchParts({ query, connection_id }) {
       await cards.first().waitFor({ timeout: 15000 });
 
       const count = await cards.count();
+      console.log("🔍 FIRST 5 CARD TEXTS FOR DEBUG:");
+
+      for (let i = 0; i < Math.min(5, count); i++) {
+        const txt = await cards.nth(i).textContent();
+        console.log(`CARD ${i}:`, txt?.slice(0, 200));
+      }
+
+
       console.log(`📦 Mobile cards: ${count}`);
 
       const parts = [];
