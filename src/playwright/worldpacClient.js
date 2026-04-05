@@ -252,7 +252,13 @@ async function searchParts({ query, connection_id }) {
         const card = cards.nth(i);
 
         try {
-          const text = await card.textContent();
+          let text = await card.textContent();
+
+           text = text
+             .replace(/Submit/gi, '')
+              .replace(/Clear/gi, '')
+             .replace(/List Price:\$\d+(\.\d+)?/gi, '')
+            .trim();
 
           if (!text.includes("Product ID:")) continue;
 
@@ -264,26 +270,42 @@ async function searchParts({ query, connection_id }) {
           const productChunks = text.split(/(?=Product ID:)/);
           for (const chunk of productChunks) {
       try {
-        const productIdMatch = chunk.match(/Product ID:\s*([A-Za-z0-9\- ]+)/);
+        const productIdMatch = chunk.match(/Product ID:\s*([A-Za-z0-9\- ]+?)(?:\s|$)/);
         const mfrMatch = chunk.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-        const priceMatch = chunk.match(/Price:\$?(\d+\.\d+)/);
+        const priceMatch = chunk.match(/Price:\$?(\d+(\.\d+)?)/i);
         const qtyMatch = chunk.match(/Qty:(\d+)/);
         const locationMatch = chunk.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
 
         const part_number = productIdMatch?.[1]?.trim() || null;
 
-        const normalized_part_number = part_number
-          ? part_number.replace(/\s+/g, '')
-          : null;
+       let normalized_part_number = part_number
+        ? part_number.replace(/\s+/g, '')
+        : null;
 
-        const mfr_id = mfrMatch?.[1] || null;
-        const price = priceMatch?.[1] || null;
-        const availability = qtyMatch?.[1] || null;
+      if (normalized_part_number) {
+         normalized_part_number = normalized_part_number
+          .replace(/MFRID.*/i, '')
+           .trim();
+      }
+
+      let mfr_id = mfrMatch?.[1] || null;
+
+      if (mfr_id) {
+        mfr_id = mfr_id
+          .replace(/[^A-Za-z0-9\-].*/i, '')
+          .trim();
+      }
+        const price = priceMatch ? Number(priceMatch[1]) : null;
+        const availability = qtyMatch ? Number(qtyMatch[1]) : null;
 
         let location = null;
-        if (locationMatch) {
-          location = locationMatch[0].replace(/Qty:\d+\s*/, '');
-        }
+ 
+      if (locationMatch) {
+       location = locationMatch[0]
+        .replace(/Qty:\d+\s*/, '')
+        .replace(/Submit.*/i, '')
+        .trim();
+      }
 
         // 🚫 CRITICAL FILTER (this fixes 80% of your garbage)
         if (
