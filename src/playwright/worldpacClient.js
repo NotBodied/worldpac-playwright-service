@@ -126,17 +126,28 @@ async function searchParts({ query, connection_id }) {
 
     // Split into individual products
      // 🔍 Find rows inside the card
-    const rows = card.locator('div:has-text("Product ID")');
+    const rows = card.locator('div').filter({
+      hasText: 'Product ID'
+    });
 
     const rowCount = await rows.count();
 
     for (let r = 0; r < rowCount; r++) {
      const row = rows.nth(r);
 
-     const rowText = await row.innerText();
+    if (!rowText.includes("Product ID") || !rowText.includes("MFR ID")) {
+      continue;
+    }
 
      // ✅ Description (first line ABOVE Product ID)
-     let description = rowText.split("\n")[0]?.trim() || null;
+    let description = rowText
+      .split("\n")
+     .find(line =>
+        !line.includes("Product ID") &&
+        !line.includes("MFR ID") &&
+        !line.includes("Qty") &&
+        !line.includes("$")
+     )?.trim() || null;
 
      // ✅ Part Number
       let part_number = null;
@@ -157,12 +168,11 @@ async function searchParts({ query, connection_id }) {
      }
 
      // ✅ Price (scoped to row, not card)
-     let price = null;
-     const priceEl = row.locator('text=$').first();
-     if (await priceEl.count()) {
-        const priceText = await priceEl.innerText();
-        price = priceText.replace('$', '').trim();
-      }
+    let price = null;
+    const priceMatch = rowText.match(/\$\d+\.\d+/);
+    if (priceMatch) {
+      price = priceMatch[0].replace('$', '');
+    }
 
       // ✅ Availability
      const availabilityMatch = rowText.match(/Qty:(\d+)/);
@@ -202,6 +212,19 @@ async function searchParts({ query, connection_id }) {
 
   console.log("🧾 DOM PARSED PARTS:", parts);
   console.log("🧾 Parsed parts count:", parts.length);
+
+  const uniqueParts = [];
+  const seen = new Set();
+
+  for (const p of parts) {
+   const key = `${p.part_number}-${p.description}`;
+   if (!seen.has(key)) {
+     seen.add(key);
+     uniqueParts.push(p);
+   }
+  }
+
+  return uniqueParts;
 
   return parts;
 
