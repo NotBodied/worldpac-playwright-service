@@ -321,9 +321,11 @@ async function searchParts({ query, connection_id }) {
           const availability = qtyMatch ? Number(qtyMatch[1]) : null;
 
           let location = null;
-          
+
           if (locationMatch) {
-            location = locationMatch[1].trim();
+            location = locationMatch[1]
+              .replace(/Submit.*$/i, '')   // ← remove "Submit by..."
+              .trim();
           }
 
           if (!part_number || part_number.length < 3) continue;
