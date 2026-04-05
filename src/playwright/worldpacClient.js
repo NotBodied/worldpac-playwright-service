@@ -252,9 +252,7 @@ async function searchParts({ query, connection_id }) {
     } 
 
     async function extractFallback(page) {
-      const cards = page.locator('div:has-text("Product ID")').filter({
-        has: page.locator('text=MFR ID'),
-      });
+      const rows = page.locator('div:has-text("Product ID") >> xpath=..');
 
       await cards.first().waitFor({ timeout: 15000 });
 
@@ -269,12 +267,13 @@ async function searchParts({ query, connection_id }) {
         try {
           const rows = card.locator(':scope > div');
           
-          const rowCount = await rows.count();
+          const count = await rows.count();
+          console.log(`📦 Product rows: ${count}`);
 
-          for (let r = 0; r < rowCount; r++) {
+          for (let i = 0; i < count; i++) {
+            const row = rows.nth(i);
+
             try {
-              const row = rows.nth(r);
-
               const rowText = await row.textContent();
               if (!rowText) continue;
 
@@ -329,7 +328,7 @@ async function searchParts({ query, connection_id }) {
 
               let description = null;
 
-              const descMatch = rowText.match(/Window Wiper Blade.*?Product ID:/);
+              const descMatch = rowText.match(/(Window Wiper Blade[^]*?)Product ID:/);
 
               if (descMatch) {
                 description = descMatch[0]
@@ -339,7 +338,7 @@ async function searchParts({ query, connection_id }) {
 
               let brand = null;
 
-              const brandEl = row.locator('img');
+              const brandEl = row.locator('img[alt]');
 
               if (await brandEl.count()) {
                 brand = await brandEl.first().getAttribute('alt');
