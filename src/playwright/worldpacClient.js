@@ -294,13 +294,18 @@ async function searchParts({ query, connection_id }) {
               const part_number = productIdMatch?.[1]?.trim() || null;
 
               let normalized_part_number = part_number
-                ? part_number.replace(/\s+/g, '')
+                ? part_number.replace(/[^A-Za-z0-9\-]/g, '')
                 : null;
 
-              let mfr_id = mfrMatch?.[1]?.trim() || null;
+              let mfr_id = null;
 
-              if (mfr_id) {
-                mfr_id = mfr_id.replace(/[^A-Za-z0-9\-].*/i, '').trim();
+              const mfrRaw = rowText.split("MFR ID:")[1];
+
+              if (mfrRaw) {
+                mfr_id = mfrRaw
+                  .split(/Price:|Qty:|Availability:/)[0] // stop at next field
+                  .replace(/[^A-Za-z0-9\-]/g, '') // strip EVERYTHING except valid chars
+                  .trim();
               }
 
               const price = priceMatch ? Number(priceMatch[1]) : null;
