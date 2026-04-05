@@ -251,13 +251,13 @@ async function searchParts({ query, connection_id }) {
     return parts;
     } 
 
-    async function extractFallback(page) {
+   async function extractFallback(page) {
       const rows = page.locator('div:has-text("Product ID") >> xpath=..');
 
       await rows.first().waitFor({ timeout: 15000 });
 
-    
-      console.log(`📦 Fallback rows: ${count}`);
+      const count = await rows.count();
+      console.log(`📦 Product rows: ${count}`);
 
       const parts = [];
 
@@ -277,98 +277,76 @@ async function searchParts({ query, connection_id }) {
 
           console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
 
-            try {
-              const rowText = await row.textContent();
-              if (!rowText) continue;
+          // --- FIELD EXTRACTION ---
 
-              if (
-                !rowText.includes("Product ID") ||
-                !rowText.includes("MFR ID") ||
-                !rowText.includes("Price") ||
-                !rowText.includes("Qty")
-              ) continue;
+          const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
+          const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
+          const qtyMatch = rowText.match(/Qty:(\d+)/);
+          const locationMatch = rowText.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
 
-              console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
+          const part_number = productIdMatch?.[1]?.trim() || null;
 
-              // --- FIELD EXTRACTION ---
+          let normalized_part_number = part_number
+            ? part_number.replace(/[^A-Za-z0-9\-]/g, '')
+            : null;
 
-              const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
-              const mfrMatch = rowText.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-              const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
-              const qtyMatch = rowText.match(/Qty:(\d+)/);
-              const locationMatch = rowText.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
+          // ✅ MFR (DOM-based)
+          let mfr_id = null;
+          const mfrEl = row.locator('text=MFR ID').first();
 
-              const part_number = productIdMatch?.[1]?.trim() || null;
-
-              let normalized_part_number = part_number
-                ? part_number.replace(/[^A-Za-z0-9\-]/g, '')
-                : null;
-
-              let mfr_id = null;
-
-              const mfrEl = row.locator('text=MFR ID').first();
-
-              if (await mfrEl.count()) {
-                const mfrText = await mfrEl.textContent();
-
-                const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-                if (match) {
-                  mfr_id = match[1].trim();
-                }
-              }
-
-              const price = priceMatch ? Number(priceMatch[1]) : null;
-              const availability = qtyMatch ? Number(qtyMatch[1]) : null;
-
-              let location = null;
-              if (locationMatch) {
-                location = locationMatch[0]
-                  .replace(/Qty:\d+\s*/, '')
-                  .replace(/Submit.*$/, '') // 🔥 remove trailing junk
-                  .trim();
-              }
-
-              if (!part_number || part_number.length < 3) continue;
-
-              let description = null;
-
-              const descMatch = rowText.match(/(Window Wiper Blade[^]*?)Product ID:/);
-
-              if (descMatch) {
-                description = descMatch[0]
-                  .replace("Product ID:", "")
-                  .trim();
-              }
-
-              let brand = null;
-
-              const brandEl = row.locator('img[alt]');
-
-              if (await brandEl.count()) {
-                brand = await brandEl.first().getAttribute('alt');
-              }
-
-              parts.push({
-                description,
-                part_number,
-                normalized_part_number,
-                mfr_id,
-                price,
-                availability,
-                location,
-                brand,
-              });
-
-            } catch (err) {
-              console.log("⚠️ Row parse error:", err.message);
+          if (await mfrEl.count()) {
+            const mfrText = await mfrEl.textContent();
+            const match = mfrText?.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+            if (match) {
+              mfr_id = match[1].trim();
             }
           }
 
-      
-      } catch (err) {
-        console.log("⚠️ Chunk parse error:", err.message);
+          const price = priceMatch ? Number(priceMatch[1]) : null;
+          const availability = qtyMatch ? Number(qtyMatch[1]) : null;
+
+          let location = null;
+          if (locationMatch) {
+            location = locationMatch[0]
+              .replace(/Qty:\d+\s*/, '')
+              .replace(/Submit.*$/, '')
+              .trim();
+          }
+
+          if (!part_number || part_number.length < 3) continue;
+
+          // ✅ Description
+          let description = null;
+          const descMatch = rowText.match(/(Window Wiper Blade[^]*?)Product ID:/);
+          if (descMatch) {
+            description = descMatch[0]
+              .replace("Product ID:", "")
+              .trim();
+          }
+
+          // ✅ Brand
+          let brand = null;
+          const brandEl = row.locator('img[alt]');
+          if (await brandEl.count()) {
+            brand = await brandEl.first().getAttribute('alt');
+          }
+
+          parts.push({
+            description,
+            part_number,
+            normalized_part_number,
+            mfr_id,
+            price,
+            availability,
+            location,
+            brand,
+          });
+
+        } catch (err) {
+          console.log(`⚠️ Row parse error [${i}]`, err.message);
+        }
       }
-    }
+
   return parts;
 }
 
