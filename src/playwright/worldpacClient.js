@@ -127,7 +127,7 @@ async function searchParts({ query, connection_id }) {
     const seen = new Set();
 
       for (const p of parts) {
-      const key = `${p.part_number}-${p.description}`;
+      const key = `${p.part_number}-${p.price}-${p.location}`;
       if (!seen.has(key)) {
         seen.add(key);
         uniqueParts.push(p);
@@ -285,7 +285,7 @@ async function searchParts({ query, connection_id }) {
 
               // --- FIELD EXTRACTION ---
 
-              const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+)/);
+              const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
               const mfrMatch = rowText.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
               const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
               const qtyMatch = rowText.match(/Qty:(\d+)/);
@@ -297,7 +297,7 @@ async function searchParts({ query, connection_id }) {
                 ? part_number.replace(/\s+/g, '')
                 : null;
 
-              let mfr_id = mfrMatch?.[1] || null;
+              let mfr_id = mfrMatch?.[1]?.trim() || null;
 
               if (mfr_id) {
                 mfr_id = mfr_id.replace(/[^A-Za-z0-9\-].*/i, '').trim();
@@ -310,6 +310,7 @@ async function searchParts({ query, connection_id }) {
               if (locationMatch) {
                 location = locationMatch[0]
                   .replace(/Qty:\d+\s*/, '')
+                  .replace(/Submit.*$/, '') // 🔥 remove trailing junk
                   .trim();
               }
 
