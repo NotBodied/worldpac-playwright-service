@@ -254,6 +254,8 @@ async function searchParts({ query, connection_id }) {
         try {
           const text = await card.textContent();
 
+          if (!text.includes("Product ID:")) continue;
+
           console.log("🧾 CARD TEXT:", text);
 
           if (!text || text.length < 20) continue;
@@ -261,41 +263,55 @@ async function searchParts({ query, connection_id }) {
           // 🔥 Split into individual products
           const productChunks = text.split(/(?=Product ID:)/);
           for (const chunk of productChunks) {
-            try {
-              const partMatch = chunk.match(/^\s*([A-Za-z0-9\-]+)/);
-              const mfrMatch = chunk.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
-              const priceMatch = chunk.match(/Price:\$?(\d+\.\d+)/);
-              const qtyMatch = chunk.match(/Qty:(\d+)/);
-              const locationMatch = chunk.match(/\b(MD|VA|PA)\s+[A-Za-z]+/);
+      try {
+        const productIdMatch = chunk.match(/Product ID:\s*([A-Za-z0-9\- ]+)/);
+        const mfrMatch = chunk.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+        const priceMatch = chunk.match(/Price:\$?(\d+\.\d+)/);
+        const qtyMatch = chunk.match(/Qty:(\d+)/);
+        const locationMatch = chunk.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
 
-              const part_number = partMatch?.[1] || null;
-              const normalized_part_number = part_number?.replace(/\s+/g, '') || null;
-              const mfr_id = mfrMatch?.[1] || null;
-              const price = priceMatch?.[1] || null;
-              const availability = qtyMatch?.[1] || null;
-              const location = locationMatch?.[0] || null;
+        const part_number = productIdMatch?.[1]?.trim() || null;
 
-          if (!part_number) continue;
+        const normalized_part_number = part_number
+          ? part_number.replace(/\s+/g, '')
+          : null;
 
-          parts.push({
-            description: null,
-            part_number,
-            normalized_part_number,
-            mfr_id,
-            price,
-            availability,
-            location,
-            brand: null,
-          });
+        const mfr_id = mfrMatch?.[1] || null;
+        const price = priceMatch?.[1] || null;
+        const availability = qtyMatch?.[1] || null;
+
+        let location = null;
+        if (locationMatch) {
+          location = locationMatch[0].replace(/Qty:\d+\s*/, '');
+        }
+
+        // 🚫 CRITICAL FILTER (this fixes 80% of your garbage)
+        if (
+          !part_number ||
+          part_number === "Product" ||
+          part_number.length < 3 ||
+          part_number.includes(" ")
+        ) continue;
+
+        parts.push({
+          description: null,
+          part_number,
+          normalized_part_number,
+          mfr_id,
+          price,
+          availability,
+          location,
+          brand: null,
+        });
+
+      } catch (err) {
+        console.log("⚠️ Chunk parse error:", err.message);
+      }
+    }
 
         } catch (err) {
-          console.log("⚠️ Chunk parse error:", err.message);
+          console.log(`⚠️ Fallback parse error [${i}]`, err.message);
         }
-      }
-
-    } catch (err) {
-      console.log(`⚠️ Fallback parse error [${i}]`, err.message);
-    }
   }
 
   return parts;
