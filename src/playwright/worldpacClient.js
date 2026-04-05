@@ -171,7 +171,7 @@ async function searchParts({ query, connection_id }) {
 
   // ✅ Price
   let price = null;
-  const priceEl = container.locator('text=$').first();
+  const priceEl = container.locator(':scope >> text=/\\$\\d+\\.\\d+/').first();
 
   if (await priceEl.count()) {
     const priceText = await priceEl.innerText();
