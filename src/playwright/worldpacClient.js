@@ -252,11 +252,10 @@ async function searchParts({ query, connection_id }) {
     } 
 
     async function extractFallback(page) {
-      const cards = page.locator('div').filter({
-        has: page.locator('text=Product ID'),
-      }).filter({
-        has: page.locator('text=Price'),
+      const cards = page.locator('div:has-text("Product ID")').filter({
+        has: page.locator('text=MFR ID'),
       });
+
       await cards.first().waitFor({ timeout: 15000 });
 
       const count = await cards.count();
@@ -279,7 +278,12 @@ async function searchParts({ query, connection_id }) {
               const rowText = await row.textContent();
               if (!rowText) continue;
 
-              if (!rowText.includes("Product ID") || !rowText.includes("Price")) continue;
+              if (
+                !rowText.includes("Product ID") ||
+                !rowText.includes("MFR ID") ||
+                !rowText.includes("Price") ||
+                !rowText.includes("Qty")
+              ) continue;
 
               console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
 
@@ -325,10 +329,12 @@ async function searchParts({ query, connection_id }) {
 
               let description = null;
 
-              const descMatch = rowText.match(/^(.+?)Product ID:/);
+              const descMatch = rowText.match(/Window Wiper Blade.*?Product ID:/);
 
               if (descMatch) {
-                description = descMatch[1].trim();
+                description = descMatch[0]
+                  .replace("Product ID:", "")
+                  .trim();
               }
 
               let brand = null;
