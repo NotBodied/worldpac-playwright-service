@@ -222,7 +222,7 @@ async function searchParts({ query, connection_id }) {
     brand,
   });
 }
-
+  }
    catch (err) {
     console.log(`⚠️ Error parsing card ${i}:`, err.message);
   }
