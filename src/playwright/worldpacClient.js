@@ -134,6 +134,7 @@ async function searchParts({ query, connection_id }) {
 
     for (let r = 0; r < rowCount; r++) {
      const row = rows.nth(r);
+     const rowText = await row.innerText();
 
     if (!rowText.includes("Product ID") || !rowText.includes("MFR ID")) {
       continue;
@@ -226,7 +227,7 @@ async function searchParts({ query, connection_id }) {
 
   return uniqueParts;
 
-  return parts;
+  
 
  
 }
