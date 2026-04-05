@@ -292,7 +292,7 @@ async function searchParts({ query, connection_id }) {
           const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
           const priceMatch = rowText.match(/Price:\$?(\d+(\.\d+)?)/i);
           const qtyMatch = rowText.match(/Qty:(\d+)/);
-          const locationMatch = rowText.match(/Qty:\d+\s+(MD|VA|PA)\s+[A-Za-z]+/);
+          const locationMatch = rowText.match(/Qty:\d+\s+([A-Z]{2}\s+[A-Za-z ]+)/);
 
           const part_number = productIdMatch?.[1]?.trim() || null;
 
@@ -321,11 +321,9 @@ async function searchParts({ query, connection_id }) {
           const availability = qtyMatch ? Number(qtyMatch[1]) : null;
 
           let location = null;
+          
           if (locationMatch) {
-            location = locationMatch[0]
-              .replace(/Qty:\d+\s*/, '')
-              .replace(/Submit.*$/, '')
-              .trim();
+            location = locationMatch[1].trim();
           }
 
           if (!part_number || part_number.length < 3) continue;
@@ -333,19 +331,12 @@ async function searchParts({ query, connection_id }) {
           // ✅ Description
           let description = null;
 
-          const lines = rowText.split('\n').map(l => l.trim()).filter(Boolean);
+          const descMatch = rowText.match(/^(.*?)Product ID:/);
 
-          for (const line of lines) {
-            if (
-              !line.includes("Product ID") &&
-              !line.includes("MFR ID") &&
-              !line.includes("Price") &&
-              !line.includes("Qty") &&
-              line.length > 8 && !/^\d+$/.test(line)
-            ) {
-              description = line;
-              break;
-            }
+          if (descMatch) {
+            description = descMatch[1]
+              .replace(/\s+/g, ' ')
+              .trim();
           }
 
           // ✅ Brand
