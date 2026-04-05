@@ -254,24 +254,28 @@ async function searchParts({ query, connection_id }) {
     async function extractFallback(page) {
       const rows = page.locator('div:has-text("Product ID") >> xpath=..');
 
-      await cards.first().waitFor({ timeout: 15000 });
+      await rows.first().waitFor({ timeout: 15000 });
 
-      const count = await cards.count();
-      console.log(`📦 Fallback cards: ${count}`);
+    
+      console.log(`📦 Fallback rows: ${count}`);
 
       const parts = [];
 
       for (let i = 0; i < count; i++) {
-        const card = cards.nth(i);
+        const row = rows.nth(i);
 
         try {
-          const rows = card.locator(':scope > div');
-          
-          const count = await rows.count();
-          console.log(`📦 Product rows: ${count}`);
+          const rowText = await row.textContent();
+          if (!rowText) continue;
 
-          for (let i = 0; i < count; i++) {
-            const row = rows.nth(i);
+          if (
+            !rowText.includes("Product ID") ||
+            !rowText.includes("MFR ID") ||
+            !rowText.includes("Price") ||
+            !rowText.includes("Qty")
+          ) continue;
+
+          console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
 
             try {
               const rowText = await row.textContent();
