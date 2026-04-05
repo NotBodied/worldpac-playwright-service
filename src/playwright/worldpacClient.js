@@ -268,16 +268,18 @@ async function searchParts({ query, connection_id }) {
         const card = cards.nth(i);
 
         try {
-          const rows = card.locator(':scope >> text=Product ID');
+          const rows = card.locator(':scope > div');
           
           const rowCount = await rows.count();
 
           for (let r = 0; r < rowCount; r++) {
             try {
-              const row = rows.nth(r).locator('..'); // go up to container
+              const row = rows.nth(r);
 
               const rowText = await row.textContent();
               if (!rowText) continue;
+
+              if (!rowText.includes("Product ID") || !rowText.includes("Price")) continue;
 
               console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
 
