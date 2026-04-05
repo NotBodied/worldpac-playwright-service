@@ -170,20 +170,37 @@ async function searchParts({ query, connection_id }) {
 
      // ✅ Price (scoped to row, not card)
     let price = null;
-    const priceMatch = rowText.match(/\$\d+\.\d+/);
-    if (priceMatch) {
-      price = priceMatch[0].replace('$', '');
+    
+    const priceEl = row.locator('span:has-text("$"), div:has-text("$")').first();
+
+    if (await priceEl.count()) {
+      const priceText = await priceEl.innerText();
+      const match = priceText.match(/\$\d+\.\d+/);
+     if (match) {
+        price = match[0].replace('$', '');
+     }
+    }
+      // ✅ Availability
+     let availability = null;
+
+    const qtyEl = row.locator('text=Qty').first();
+
+    if (await qtyEl.count()) {
+     const qtyText = await qtyEl.innerText();
+     const match = qtyText.match(/Qty:(\d+)/);
+     if (match) {
+       availability = match[1];
+     }
     }
 
-      // ✅ Availability
-     const availabilityMatch = rowText.match(/Qty:(\d+)/);
-
       // ✅ Location
-     const locationLine = rowText
-       .split("\n")
-       .find(line => line.includes("MD") || line.includes("VA") || line.includes("PA"));
+    let location = null;
 
-     const location = locationLine ? locationLine.trim() : null;
+    const locationEl = row.locator('text=MD, text=VA, text=PA').first();
+
+    if (await locationEl.count()) {
+      location = (await locationEl.innerText()).trim();
+    }
 
      // ✅ Brand (still from card)
       const brandEl = await card.locator('.sd-brand-image').first();
@@ -200,8 +217,8 @@ async function searchParts({ query, connection_id }) {
        normalized_part_number,
         mfr_id,
         price,
-        availability: availabilityMatch?.[1] || null,
-       location,
+        availability,
+        location,
         brand,
       });
     }
