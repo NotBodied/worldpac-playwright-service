@@ -259,13 +259,12 @@ async function searchParts({ query, connection_id }) {
           if (!text || text.length < 20) continue;
 
           // 🔥 Split into individual products
-          const productChunks = text.split("Product ID:").slice(1);
-
+          const productChunks = text.split(/(?=Product ID:)/);
           for (const chunk of productChunks) {
             try {
-              const partMatch = chunk.match(/^([^\s]+)/);
-              const mfrMatch = chunk.match(/MFR ID:\s*([^\s]+)/);
-              const priceMatch = chunk.match(/\$(\d+\.\d+)/);
+              const partMatch = chunk.match(/^\s*([A-Za-z0-9\-]+)/);
+              const mfrMatch = chunk.match(/MFR ID:\s*([A-Za-z0-9\-]+)/);
+              const priceMatch = chunk.match(/Price:\$?(\d+\.\d+)/);
               const qtyMatch = chunk.match(/Qty:(\d+)/);
               const locationMatch = chunk.match(/\b(MD|VA|PA)\s+[A-Za-z]+/);
 
