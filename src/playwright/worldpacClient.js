@@ -289,8 +289,7 @@ async function searchParts({ query, connection_id }) {
         if (
           !part_number ||
           part_number === "Product" ||
-          part_number.length < 3 ||
-          part_number.includes(" ")
+          part_number.length < 3
         ) continue;
 
         parts.push({
