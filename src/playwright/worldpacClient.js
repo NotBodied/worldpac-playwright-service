@@ -248,7 +248,7 @@ async function searchParts({ query, connection_id }) {
 
       const parts = [];
 
-        for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count; i++) {
         const card = cards.nth(i);
 
         try {
@@ -258,53 +258,48 @@ async function searchParts({ query, connection_id }) {
 
           if (!text || text.length < 20) continue;
 
-          const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+          // 🔥 Split into individual products
+          const productChunks = text.split("Product ID:").slice(1);
 
-          let description = null;
-          let part_number = null;
-          let normalized_part_number = null;
-          let mfr_id = null;
-          let price = null;
+          for (const chunk of productChunks) {
+            try {
+              const partMatch = chunk.match(/^([^\s]+)/);
+              const mfrMatch = chunk.match(/MFR ID:\s*([^\s]+)/);
+              const priceMatch = chunk.match(/\$(\d+\.\d+)/);
+              const qtyMatch = chunk.match(/Qty:(\d+)/);
+              const locationMatch = chunk.match(/\b(MD|VA|PA)\s+[A-Za-z]+/);
 
-          for (const line of lines) {
-            if (line.startsWith("Product ID")) {
-              const val = line.split(":")[1]?.trim();
-              part_number = val;
-              if (val) normalized_part_number = val.replace(/\s+/g, '');
-            }
-
-            else if (line.startsWith("MFR ID")) {
-              mfr_id = line.split(":")[1]?.trim();
-            }
-
-            else if (line.includes("$")) {
-              const match = line.match(/\$\d+\.\d+/);
-              if (match) price = match[0].replace('$', '');
-            }
-
-            else if (!description) {
-              description = line;
-            }
-          }
+              const part_number = partMatch?.[1] || null;
+              const normalized_part_number = part_number?.replace(/\s+/g, '') || null;
+              const mfr_id = mfrMatch?.[1] || null;
+              const price = priceMatch?.[1] || null;
+              const availability = qtyMatch?.[1] || null;
+              const location = locationMatch?.[0] || null;
 
           if (!part_number) continue;
 
           parts.push({
-            description,
+            description: null,
             part_number,
             normalized_part_number,
             mfr_id,
             price,
-            availability: null,
-            location: null,
+            availability,
+            location,
             brand: null,
           });
 
         } catch (err) {
-          console.log(`⚠️ Fallback parse error [${i}]`, err.message);
+          console.log("⚠️ Chunk parse error:", err.message);
         }
       }
 
-      return parts;
+    } catch (err) {
+      console.log(`⚠️ Fallback parse error [${i}]`, err.message);
     }
+  }
+
+  return parts;
+}
+
 module.exports = { searchParts };
