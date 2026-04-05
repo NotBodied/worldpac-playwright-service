@@ -253,7 +253,10 @@ async function searchParts({ query, connection_id }) {
 
         try {
           const text = await card.textContent();
-          if (!text.includes("Product ID")) continue;
+
+          console.log("🧾 CARD TEXT:", text);
+
+          if (!text || text.length < 20) continue;
 
           const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
