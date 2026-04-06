@@ -27,19 +27,21 @@ async function ensureLoggedIn(page) {
 
     const userInput = page.locator('#username');
 
-    await userInput.waitFor({ timeout: 15000 });
+    await userInput.waitFor({ timeout: 6000 });
 
     await userInput.fill(process.env.WORLDPAC_USERNAME);
     await page.locator('input[type="password"]').fill(process.env.WORLDPAC_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
-    await page.locator('input[name="searchTerm"]').waitFor({ timeout: 15000 });
+    await page.locator('input[name="searchTerm"]').waitFor({ timeout: 6000 });
 
     console.log("✅ Login successful");
 
   }
 }
 async function searchParts({ query, connection_id }) {
+
+  const startTime = Date.now();
 
   if (isSearching) {
     console.log("⏳ Skipping duplicate request");
@@ -64,7 +66,7 @@ async function searchParts({ query, connection_id }) {
   const searchInput = page.locator('input[name="searchTerm"]');
 
   // Wait for it to be usable
-  await searchInput.waitFor({ timeout: 15000 });
+  await searchInput.waitFor({ timeout: 6000 });
 
   // Clear anything in it
   await searchInput.fill('');
@@ -74,6 +76,11 @@ async function searchParts({ query, connection_id }) {
 
   // Submit search
   await searchInput.press("Enter");
+
+  if (Date.now() - startTime > 8000) {
+    console.warn("⏳ Timeout safeguard hit before results load");
+    return [];
+  }
 
   console.log("⏳ Waiting for product cards (multi-layout)...");
 
@@ -87,8 +94,8 @@ async function searchParts({ query, connection_id }) {
     });
 
   await Promise.race([
-    mobileCards.first().waitFor({ timeout: 15000 }).catch(() => {}),
-    fallbackCards.first().waitFor({ timeout: 15000 }).catch(() => {})
+    mobileCards.first().waitFor({ timeout: 6000 }).catch(() => {}),
+    fallbackCards.first().waitFor({ timeout: 6000 }).catch(() => {})
   ]);
 
   // console.log("⏳ Waiting for results DOM...");
@@ -99,21 +106,10 @@ async function searchParts({ query, connection_id }) {
   // 📸 Screenshot AFTER results load
   await page.screenshot({ path: "debug-results.png", fullPage: true });
 
-  // 🌐 Debug URL
-  //console.log("🌐 AFTER SEARCH URL:", page.url());;
-
-
-
-  // Wait for ANY repeating structure (we’ll refine this)
-  // await page.waitForTimeout(5000);
-
-
-  // console.log("🧠 DOM SNAPSHOT:");
-  // console.dir(domSnapshot, { depth: null });
-
-
-  // Small buffer
-  //await page.waitForTimeout(2000);
+  if (Date.now() - startTime > 8000) {
+    console.warn("⏳ Timeout safeguard hit before extraction");
+    return [];
+  }
 
   console.log("🧠 Extracting via DOM...");
 
@@ -163,7 +159,7 @@ async function searchParts({ query, connection_id }) {
 
     async function extractMobile(page) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
-      await cards.first().waitFor({ timeout: 15000 });
+      await cards.first().waitFor({ timeout: 6000 });
 
       const count = await cards.count();
       console.log("🔍 FIRST 5 CARD TEXTS FOR DEBUG:");
@@ -286,14 +282,17 @@ async function searchParts({ query, connection_id }) {
    async function extractFallback(page) {
       const rows = page.locator('div:has-text("Product ID") >> xpath=..');
 
-      await rows.first().waitFor({ timeout: 15000 });
+      await rows.first().waitFor({ timeout: 6000 });
 
       const count = await rows.count();
       console.log(`📦 Product rows: ${count}`);
 
+      // 🔥 LIMIT TO FIRST 10 ROWS
+      const limit = Math.min(count, 10);
+
       const parts = [];
 
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < limit; i++) {
         const row = rows.nth(i);
 
         try {
