@@ -1,5 +1,8 @@
 const { getSession } = require("./sessionManager");
 
+let isSearching = false;
+
+
 async function ensureLoggedIn(page) {
   console.log("🔐 Ensuring login state...");
 
@@ -37,6 +40,14 @@ async function ensureLoggedIn(page) {
   }
 }
 async function searchParts({ query, connection_id }) {
+
+  if (isSearching) {
+    console.log("⏳ Skipping duplicate request");
+    return [];
+  }
+
+  isSearching = true;
+
   try {
   const { page } = await getSession(connection_id);
 
@@ -143,10 +154,12 @@ async function searchParts({ query, connection_id }) {
       return uniqueParts;
 
         } catch (err) {
-          console.error("❌ searchParts crashed:", err.message);
-          return [];
-        }
+        console.error("❌ searchParts crashed:", err.message);
+        return [];
+      } finally {
+        isSearching = false;
       }
+    }
 
     async function extractMobile(page) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
