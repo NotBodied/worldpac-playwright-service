@@ -37,6 +37,7 @@ async function ensureLoggedIn(page) {
   }
 }
 async function searchParts({ query, connection_id }) {
+  try {
   const { page } = await getSession(connection_id);
 
   console.log("🚀 searchParts START");
@@ -113,13 +114,18 @@ async function searchParts({ query, connection_id }) {
     const isMobileLayout = mobileCount > fallbackCount;
         let parts = [];
 
-    if (isMobileLayout) {
-      console.log("📱 Using MOBILE extraction");
-      parts = await extractMobile(page);
-    } else {
-      console.log("🖥️ Using FALLBACK extraction");
-      parts = await extractFallback(page);
-    }
+        try {
+          if (isMobileLayout) {
+            console.log("📱 Using MOBILE extraction");
+            parts = await extractMobile(page);
+          } else {
+            console.log("🖥️ Using FALLBACK extraction");
+            parts = await extractFallback(page);
+          }
+        } catch (err) {
+          console.warn("⚠️ Extraction failed:", err.message);
+          parts = []; // fallback so API doesn’t crash
+        }
 
     console.log("🧾 RAW PARTS:", parts);
 
@@ -136,7 +142,11 @@ async function searchParts({ query, connection_id }) {
 
       return uniqueParts;
 
+        } catch (err) {
+          console.error("❌ searchParts crashed:", err.message);
+          return [];
         }
+      }
 
     async function extractMobile(page) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
