@@ -29,7 +29,7 @@ app.post("/", async (req, res) => {
     }
 
     // 🔥 Use your service layer
-    const { searchPartsService } = require("./services/partsService");
+    const { searchPartsService } = require("./playwright/services/partsService");
 
     const results = await searchPartsService({
       query,
