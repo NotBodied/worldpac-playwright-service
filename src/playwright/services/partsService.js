@@ -1,6 +1,6 @@
 // services/partsService.js
 
-const { searchParts } = require("../playwright/worldpacClient");
+const { searchParts } = require("../worldpacClient");
 
 async function searchPartsService({
   query,
