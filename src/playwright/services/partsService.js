@@ -1,0 +1,161 @@
+// services/partsService.js
+
+const { searchParts } = require("../playwright/worldpacClient");
+
+async function searchPartsService({
+  query,
+  connection_id,
+  vehicle = null,
+  options = {}
+}) {
+
+  const start = Date.now();
+
+  const {
+    limit = 5,
+    sort = "best"
+  } = options;
+
+  // 🔥 CALL YOUR EXISTING FUNCTION
+  const rawParts = await searchParts({
+    query,
+    connection_id
+  });
+
+  // Normalize
+  const normalized = normalizeParts(rawParts);
+
+  // Sort
+  const sorted = sortParts(normalized, sort);
+
+  // Limit
+  const results = sorted.slice(0, limit);
+
+  return {
+    query,
+    vehicle,
+    results,
+    meta: {
+      total_found: normalized.length,
+      returned: results.length,
+      execution_time_ms: Date.now() - start
+    }
+  };
+}
+
+function normalizeParts(parts) {
+  return parts.map(p => {
+    const is_special_order =
+      p.location?.toLowerCase().includes("special order") || false;
+
+    return {
+      // ✅ REQUIRED BY FITZFLOW
+      supplier: "Worldpac",
+      part_number: p.part_number || "",
+      description: p.description || "",
+      brand: p.brand || "",
+
+      // 🔥 IMPORTANT: price → cost
+      cost: p.price ?? 0,
+
+      // Convert availability into readable string
+      availability: formatAvailability(p),
+
+      confidence: "live",
+
+      // Optional but powerful
+      attributes: buildAttributes(p),
+
+      // 🧠 KEEP INTERNAL (NOT REQUIRED BUT USEFUL)
+      _meta: {
+        score: calculateScore(p),
+        estimated_delivery: estimateDelivery(p),
+        is_special_order
+      }
+    };
+  });
+}
+
+function calculateScore(p) {
+  let score = 0;
+
+  if (p.price != null) score += 30;
+  if (p.availability > 0) score += 30;
+  if (!p.location?.includes("Special Order")) score += 20;
+
+  if (p.price != null) {
+    score += Math.max(0, 20 - p.price);
+  }
+
+  return Math.round(score);
+}
+
+function formatAvailability(p) {
+  if (!p.location) return "Unknown";
+
+  if (p.location.includes("Special Order")) {
+    return "Ships 2-3 Days";
+  }
+
+  if (p.availability > 0) {
+    return "In Stock";
+  }
+
+  return "Check Availability";
+}
+
+function buildAttributes(p) {
+  const attrs = {};
+
+  if (p.location) {
+    attrs.location = p.location;
+  }
+
+  if (p.brand) {
+    attrs.brand = p.brand;
+  }
+
+  return attrs;
+}
+
+function estimateDelivery(p) {
+  if (!p.location) return "Unknown";
+
+  if (p.location.includes("Special Order")) {
+    return "2-3 days";
+  }
+
+  return "Same Day";
+}
+
+function sortParts(parts, sort) {
+  const copy = [...parts];
+
+  if (sort === "cheapest") {
+    return copy.sort((a, b) => (a.price ?? 9999) - (b.price ?? 9999));
+  }
+
+  if (sort === "fastest") {
+    return copy.sort((a, b) => {
+      if (a.is_special_order === b.is_special_order) return 0;
+      return a.is_special_order ? 1 : -1;
+    });
+  }
+
+  return copy.sort((a, b) => {
+    // 1. In-stock first
+    if (a.is_special_order !== b.is_special_order) {
+        return a.is_special_order ? 1 : -1;
+    }
+
+    // 2. Higher availability
+    if ((b.availability ?? 0) !== (a.availability ?? 0)) {
+        return (b.availability ?? 0) - (a.availability ?? 0);
+    }
+
+    // 3. Lower price
+    return (a.price ?? 9999) - (b.price ?? 9999);
+ });
+    }
+
+module.exports = { searchPartsService };
