@@ -41,14 +41,18 @@ async function ensureLoggedIn(page) {
 }
 async function searchParts({ query, connection_id }) {
 
+  console.log("📥 INCOMING REQUEST:", query, Date.now());
+
   const startTime = Date.now();
 
-  if (isSearching) {
-    console.log("⏳ Skipping duplicate request");
+ if (isSearching) {
+    console.log("⏳ Already searching — blocked");
     return [];
   }
-
-  isSearching = true;
+  
+ // 🔒 LOCK IMMEDIATELY (no await before this)
+ isSearching = true;
+console.log("🔒 LOCK ACQUIRED");
 
   try {
   const { page } = await getSession(connection_id);
