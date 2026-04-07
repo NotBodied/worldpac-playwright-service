@@ -112,10 +112,10 @@ async function searchParts({ query, connection_id }) {
     // ⏱️ START TIMER HERE (NOT AT FUNCTION START)
     const searchStartTime = Date.now();
 
-    if (Date.now() - searchStartTime > 10000) {
-      console.warn("⏳ Timeout safeguard hit before results load");
-      return [];
-    }
+    //if (Date.now() - searchStartTime > 10000) {
+    //  console.warn("⏳ Timeout safeguard hit before results load");
+    //  return [];
+    //}
 
     console.log("⏳ Waiting for product cards...");
 
@@ -132,6 +132,33 @@ async function searchParts({ query, connection_id }) {
       await mobileCards.first().waitFor({ timeout: 8000 });
       resultsLoaded = true;
       console.log("📱 Mobile results detected");
+
+      console.log("⏳ Waiting for full results to render...");
+
+      let previousCount = 0;
+      let stableCount = 0;
+
+      for (let i = 0; i < 10; i++) {
+        const currentCount = await mobileCards.count();
+
+        console.log(`📊 Render check ${i}: ${currentCount} cards`);
+
+        if (currentCount === previousCount) {
+          stableCount++;
+        } else {
+          stableCount = 0;
+        }
+
+        if (stableCount >= 2) {
+          console.log("✅ Results fully loaded");
+          break;
+        }
+
+        previousCount = currentCount;
+
+        await page.waitForTimeout(500);
+      }
+
     } catch {}
 
     if (!resultsLoaded) {
