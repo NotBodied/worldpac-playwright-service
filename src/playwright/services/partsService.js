@@ -132,7 +132,7 @@ function sortParts(parts, sort) {
   const copy = [...parts];
 
   if (sort === "cheapest") {
-    return copy.sort((a, b) => (a.price ?? 9999) - (b.price ?? 9999));
+    return copy.sort((a, b) => (a.cost ?? 9999) - (b.cost ?? 9999));
   }
 
   if (sort === "fastest") {
@@ -154,7 +154,7 @@ function sortParts(parts, sort) {
     }
 
     // 3. Lower price
-    return (a.price ?? 9999) - (b.price ?? 9999);
+    return (a.cost ?? 9999) - (b.cost ?? 9999);
  });
     }
 

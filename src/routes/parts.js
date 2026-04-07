@@ -2,7 +2,7 @@ const API_KEY = process.env.SERVICE_API_KEY;
 const express = require("express");
 const router = express.Router();
 
-const { searchParts } = require("../playwright/worldpacClient");
+const { searchPartsService } = require("../services/partsService");
 
 router.post("/search-parts", async (req, res) => {
   try {
@@ -27,7 +27,15 @@ router.post("/search-parts", async (req, res) => {
     }
 
     // 🔍 MAIN LOGIC
-    const results = await searchParts({ query, connection_id });
+    const results = await searchPartsService({
+      query,
+      connection_id,
+      vehicle: req.body.vehicle || null,
+      options: {
+        limit: 5,
+        sort: "best"
+      }
+    });
 
     // ✅ RESPONSE
     res.json(results);
