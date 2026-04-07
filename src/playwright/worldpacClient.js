@@ -348,9 +348,9 @@ async function searchParts({ query, connection_id }) {
 
           if (
             !rowText.includes("Product ID") ||
-            !rowText.includes("MFR ID") ||
-            !rowText.includes("Price") ||
-            !rowText.includes("Qty")
+            //!rowText.includes("MFR ID") ||
+            !rowText.includes("Price") //||
+            //!rowText.includes("Qty")
           ) continue;
 
           console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
