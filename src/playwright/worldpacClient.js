@@ -3,14 +3,22 @@ const { getSession } = require("./sessionManager");
 let isSearching = false;
 
 
-async function ensureLoggedIn(page) {
-  console.log("🔐 Ensuring login state...");
+  async function ensureLoggedIn(page) {
+    console.log("🔐 Ensuring login state...");
 
-  // 1. Load app (NOT /login)
-  await page.goto("https://speeddial.worldpac.com/#/", {
-    waitUntil: "domcontentloaded",
-    timeout: 60000,
-  });
+    // 1. Load app (NOT /login)
+    const currentUrl = page.url();
+
+  if (!currentUrl.includes("speeddial.worldpac.com")) {
+    console.log("🌐 Navigating to Worldpac...");
+
+    await page.goto("https://speeddial.worldpac.com/#/", {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+  } else {
+    console.log("♻️ Already on Worldpac, skipping goto");
+  }
 
   // 2. Let SPA load
   // Wait for either login OR search input
@@ -45,121 +53,133 @@ async function searchParts({ query, connection_id }) {
 
   const startTime = Date.now();
 
- if (isSearching) {
+  if (isSearching) {
     console.log("⏳ Already searching — blocked");
     return [];
   }
-  
- // 🔒 LOCK IMMEDIATELY (no await before this)
- isSearching = true;
-console.log("🔒 LOCK ACQUIRED");
+
+  isSearching = true;
+  console.log("🔒 LOCK ACQUIRED");
+
+  let session;
+  let page;
 
   try {
-  const { page } = await getSession(connection_id);
+    // ✅ CREATE SESSION
+    session = await getSession(connection_id);
+    page = session.page;
 
-  console.log("🚀 searchParts START");
+    // 💀 Detect dead page
+    if (!page || page.isClosed()) {
+      console.warn("⚠️ Page is dead — creating new session");
+      session = await getSession(connection_id, { forceNew: true });
+      page = session.page;
+    }
 
-  console.log("🔍 About to ensure login...");
-  await ensureLoggedIn(page);
-  console.log("✅ Login complete");
+    // 💥 Crash listener
+    page.on("crash", () => {
+      console.error("💥 PAGE CRASH EVENT DETECTED");
+    });
 
-  console.log("🔍 About to search...");
+    console.log("🚀 searchParts START");
 
-  console.log("🔍 Performing search...");
+    // ✅ LOGIN (WITH RETRY)
+    try {
+      await ensureLoggedIn(page);
+    } catch (err) {
+      console.warn("⚠️ ensureLoggedIn failed — recreating session");
 
-  const searchInput = page.locator('input[name="searchTerm"]');
+      session = await getSession(connection_id, { forceNew: true });
+      page = session.page;
 
-  // Wait for it to be usable
-  await searchInput.waitFor({ timeout: 6000 });
+      await ensureLoggedIn(page);
+    }
 
-  // Clear anything in it
-  await searchInput.fill('');
+    console.log("✅ Login complete");
 
-  // Type query like real user
-  await searchInput.type(query, { delay: 50 });
+    console.log("🔍 Performing search...");
 
-  // Submit search
-  await searchInput.press("Enter");
+    // 🧠 SPA STABILIZE
+    await page.waitForTimeout(500);
 
-  if (Date.now() - startTime > 8000) {
-    console.warn("⏳ Timeout safeguard hit before results load");
-    return [];
-  }
+    const searchInput = page.locator('input[name="searchTerm"]');
 
-  console.log("⏳ Waiting for product cards (multi-layout)...");
+    await searchInput.waitFor({ timeout: 6000 });
+    await searchInput.fill('');
+    await searchInput.type(query, { delay: 50 });
+    await searchInput.press("Enter");
 
+    if (Date.now() - startTime > 8000) {
+      console.warn("⏳ Timeout safeguard hit before results load");
+      return [];
+    }
 
-    // fallback selector
-  const mobileCards = page.locator('.mobile-card.product-quote-mobile');
-  const fallbackCards = page.locator('div').filter({
+    console.log("⏳ Waiting for product cards...");
+
+    const mobileCards = page.locator('.mobile-card.product-quote-mobile');
+    const fallbackCards = page.locator('div').filter({
       has: page.locator('text=Product ID'),
     }).filter({
       has: page.locator('text=Price'),
     });
 
-  await Promise.race([
-    mobileCards.first().waitFor({ timeout: 6000 }).catch(() => {}),
-    fallbackCards.first().waitFor({ timeout: 6000 }).catch(() => {})
-  ]);
+    await Promise.race([
+      mobileCards.first().waitFor({ timeout: 6000 }).catch(() => {}),
+      fallbackCards.first().waitFor({ timeout: 6000 }).catch(() => {})
+    ]);
 
-  // console.log("⏳ Waiting for results DOM...");
+    await page.screenshot({ path: "debug-results.png", fullPage: true });
 
-  // Temporary wait for DOM to fully render (we will replace this later)
-  // await page.waitForTimeout(5000);
+    if (Date.now() - startTime > 8000) {
+      console.warn("⏳ Timeout safeguard hit before extraction");
+      return [];
+    }
 
-  // 📸 Screenshot AFTER results load
-  await page.screenshot({ path: "debug-results.png", fullPage: true });
+    console.log("🧠 Extracting via DOM...");
 
-  if (Date.now() - startTime > 8000) {
-    console.warn("⏳ Timeout safeguard hit before extraction");
-    return [];
-  }
-
-  console.log("🧠 Extracting via DOM...");
-
-    // Detect layout
-    
     const mobileCount = await mobileCards.count();
     const fallbackCount = await fallbackCards.count();
 
     const isMobileLayout = mobileCount > fallbackCount;
-        let parts = [];
 
-        try {
-          if (isMobileLayout) {
-            console.log("📱 Using MOBILE extraction");
-            parts = await extractMobile(page);
-          } else {
-            console.log("🖥️ Using FALLBACK extraction");
-            parts = await extractFallback(page);
-          }
-        } catch (err) {
-          console.warn("⚠️ Extraction failed:", err.message);
-          parts = []; // fallback so API doesn’t crash
-        }
+    let parts = [];
+
+    try {
+      if (isMobileLayout) {
+        console.log("📱 Using MOBILE extraction");
+        parts = await extractMobile(page);
+      } else {
+        console.log("🖥️ Using FALLBACK extraction");
+        parts = await extractFallback(page);
+      }
+    } catch (err) {
+      console.warn("⚠️ Extraction failed:", err.message);
+      parts = [];
+    }
 
     console.log("🧾 RAW PARTS:", parts);
 
     const uniqueParts = [];
     const seen = new Set();
 
-      for (const p of parts) {
+    for (const p of parts) {
       const key = `${p.part_number}-${p.price}-${p.location}`;
       if (!seen.has(key)) {
         seen.add(key);
         uniqueParts.push(p);
       }
-      }
-
-      return uniqueParts;
-
-        } catch (err) {
-        console.error("❌ searchParts crashed:", err.message);
-        return [];
-      } finally {
-        isSearching = false;
-      }
     }
+
+    return uniqueParts;
+
+  } catch (err) {
+    console.error("❌ searchParts crashed:", err.message);
+    return [];
+  } finally {
+    isSearching = false;
+    console.log("🔓 LOCK RELEASED");
+  }
+}
 
     async function extractMobile(page) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
