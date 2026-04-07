@@ -4,49 +4,45 @@ const router = express.Router();
 
 const { searchPartsService } = require("../playwright/services/partsService");
 
+const { createJob } = require("../jobs/jobStore");
+const { runJob } = require("../jobs/jobRunner");
+const { v4: uuidv4 } = require("uuid");
+
+const { getJob } = require("../jobs/jobStore");
+
 router.post("/search-parts", async (req, res) => {
-  try {
-    // 🔐 API KEY CHECK
-    const incomingKey = req.headers["x-api-key"];
+  const job_id = uuidv4();
 
-    console.log("Auth header:", incomingKey ? "present" : "missing");
+  createJob(job_id, {
+    status: "pending",
+    results: [],
+    created_at: Date.now()
+  });
 
-    if (!incomingKey || incomingKey !== API_KEY) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
+  runJob(job_id, {
+    query: req.body.query,
+    connection_id: "fitzflow-main-session",
+    vehicle: req.body.vehicle_context || null,
+    options: {
+      limit: 20,
+      sort: "best"
     }
+  });
 
-    // 📦 BODY VALIDATION
-    const { query, connection_id } = req.body;
+  return res.json({
+    job_id,
+    status: "started"
+  });
+});
 
-    if (!query || !connection_id) {
-      return res.status(400).json({
-        error: "Missing required fields",
-      });
-    }
+router.get("/search-parts/:job_id", (req, res) => {
+  const job = getJob(req.params.job_id);
 
-    // 🔍 MAIN LOGIC
-    const results = await searchPartsService({
-      query,
-      connection_id,
-      vehicle: req.body.vehicle || null,
-      options: {
-        limit: 20,
-        sort: "best"
-      }
-    });
-
-    // ✅ RESPONSE
-    res.json(results);
-
-  } catch (error) {
-    console.error("❌ Error:", error);
-
-    res.status(500).json({
-      error: "Internal server error",
-    });
+  if (!job) {
+    return res.status(404).json({ error: "Job not found" });
   }
+
+  res.json(job);
 });
 
 module.exports = router;
