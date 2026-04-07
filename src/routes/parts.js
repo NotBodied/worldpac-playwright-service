@@ -42,7 +42,7 @@ router.get("/search-parts/:job_id", (req, res) => {
     return res.status(404).json({ error: "Job not found" });
   }
 
-  res.json(job.results || []);
+  res.json(job);
 });
 
 module.exports = router;
