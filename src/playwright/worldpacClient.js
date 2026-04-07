@@ -42,6 +42,7 @@ let isSearching = false;
     await page.locator('button[type="submit"]').click();
 
     await page.locator('input[name="searchTerm"]').waitFor({ timeout: 6000 });
+    await page.waitForTimeout(500); // 👈 ADD THIS
 
     console.log("✅ Login successful");
 
