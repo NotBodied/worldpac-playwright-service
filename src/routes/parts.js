@@ -6,12 +6,12 @@ const { searchPartsService } = require("../playwright/services/partsService");
 
 const { createJob } = require("../jobs/jobStore");
 const { runJob } = require("../jobs/jobRunner");
-const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
 
 const { getJob } = require("../jobs/jobStore");
 
 router.post("/search-parts", async (req, res) => {
-  const job_id = uuidv4();
+  const job_id = crypto.randomUUID();
 
   createJob(job_id, {
     status: "pending",
