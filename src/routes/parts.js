@@ -2,7 +2,7 @@ const API_KEY = process.env.SERVICE_API_KEY;
 const express = require("express");
 const router = express.Router();
 
-const { searchPartsService } = require("../services/partsService");
+const { searchPartsService } = require("../playwright/services/partsService");
 
 router.post("/search-parts", async (req, res) => {
   try {
