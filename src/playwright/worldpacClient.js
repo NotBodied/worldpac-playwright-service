@@ -179,10 +179,10 @@ async function searchParts({ query, connection_id }) {
 
     await page.screenshot({ path: "debug-results.png", fullPage: true });
 
-    if (Date.now() - searchStartTime > 12000) {
-      console.warn("⏳ Timeout safeguard hit before extraction");
-      return [];
-    }
+    //if (Date.now() - searchStartTime > 12000) {
+     // console.warn("⏳ Timeout safeguard hit before extraction");
+     // return [];
+   // }
 
     console.log("🧠 Extracting via DOM...");
 
@@ -261,13 +261,14 @@ async function searchParts({ query, connection_id }) {
         
 
       // ⏱️ GLOBAL TIME SAFETY
-      if (Date.now() - searchStartTime > 12000) {
-        console.warn("⏳ Stopping extraction early (timeout safety)");
+      if (Date.now() - searchStartTime > 30000) {
+        console.warn("⏳ Soft timeout hit, stopping extraction");
         break;
       }
 
       // 🔥 LIMIT RESULTS
-      if (parts.length >= 10) break;
+      // TEMP: no hard limit
+      // if (parts.length >= 20) break;
 
         const card = cards.nth(i);
 
@@ -373,6 +374,8 @@ async function searchParts({ query, connection_id }) {
           }
         }
       }
+
+    console.log(`✅ Returning ${parts.length} parts`);
 
     return parts;
     } 
