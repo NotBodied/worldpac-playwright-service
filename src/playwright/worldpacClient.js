@@ -169,7 +169,7 @@ async function searchParts({ query, connection_id }) {
     try {
       if (isMobileLayout) {
         console.log("📱 Using MOBILE extraction");
-        parts = await extractMobile(page);
+        parts = await extractMobile(page, searchStartTime);
       } else {
         console.log("🖥️ Using FALLBACK extraction");
         parts = await extractFallback(page);
@@ -203,11 +203,18 @@ async function searchParts({ query, connection_id }) {
   }
 }
 
-    async function extractMobile(page) {
+    async function extractMobile(page, searchStartTime) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
       await cards.first().waitFor({ timeout: 6000 });
 
-      const count = await cards.count();
+      const totalCount = await cards.count();
+
+      // 🔥 LIMIT RESULTS (VERY IMPORTANT)
+      const count = Math.min(totalCount, 15);
+
+      console.log(`📦 Mobile cards (limited): ${count} / ${totalCount}`);
+
+
       console.log("🔍 FIRST 5 CARD TEXTS FOR DEBUG:");
 
       for (let i = 0; i < Math.min(5, count); i++) {
@@ -216,11 +223,22 @@ async function searchParts({ query, connection_id }) {
       }
 
 
-      console.log(`📦 Mobile cards: ${count}`);
+      //console.log(`📦 Mobile cards: ${count}`);
 
       const parts = [];
 
       for (let i = 0; i < count; i++) {
+        
+
+      // ⏱️ GLOBAL TIME SAFETY
+      if (Date.now() - searchStartTime > 12000) {
+        console.warn("⏳ Stopping extraction early (timeout safety)");
+        break;
+      }
+
+      // 🔥 LIMIT RESULTS
+      if (parts.length >= 10) break;
+
         const card = cards.nth(i);
 
         const rows = card.locator(':scope > div');
