@@ -33,10 +33,10 @@ app.post("/", async (req, res) => {
 
     const results = await searchPartsService({
       query,
-      connection_id: "default", // temp fallback
+      connection_id: `session-${Date.now()}`, // temp fallback
       vehicle: req.body.vehicle_context || null,
       options: {
-        limit: 5,
+        limit: 20,
         sort: "best"
       }
     });
