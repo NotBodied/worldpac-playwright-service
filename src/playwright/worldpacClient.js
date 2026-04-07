@@ -97,6 +97,8 @@ async function searchParts({ query, connection_id }) {
 
     console.log("✅ Login complete");
 
+    await page.waitForTimeout(1500);
+
     console.log("🔍 Performing search...");
 
     // 🧠 SPA STABILIZE
@@ -271,6 +273,8 @@ async function searchParts({ query, connection_id }) {
         const rows = card.locator(':scope > div');
         const rowCount = await rows.count();
 
+      let added = false;
+
         for (let r = 0; r < rowCount; r++) {
           const row = rows.nth(r);
 
@@ -348,7 +352,7 @@ async function searchParts({ query, connection_id }) {
               }
             }
 
-            if (!part_number) continue;
+            if (!part_number || added) continue;
 
             parts.push({
               description,
@@ -360,6 +364,8 @@ async function searchParts({ query, connection_id }) {
               location,
               brand,
             });
+
+            added = true;
 
           } catch (err) {
             console.log(`⚠️ Mobile parse error [${i}-${r}]`, err.message);
