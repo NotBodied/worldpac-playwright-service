@@ -162,7 +162,7 @@ async function searchParts({ query, connection_id }) {
     console.log("📊 Mobile count:", await mobileCards.count());
     console.log("📊 Fallback count:", await fallbackCards.count());
 
-    const isMobileLayout = mobileCount > fallbackCount;
+    const isMobileLayout = true;
 
     let parts = [];
 
@@ -353,8 +353,9 @@ async function searchParts({ query, connection_id }) {
             //!rowText.includes("Qty")
           ) continue;
 
+          console.log("✅ Row passed filter");
           console.log("🔎 ROW TEXT:", rowText.slice(0, 200));
-
+          
           // --- FIELD EXTRACTION ---
 
           const productIdMatch = rowText.match(/Product ID:\s*([A-Za-z0-9\- ]+?)\s+MFR ID/);
