@@ -109,7 +109,10 @@ async function searchParts({ query, connection_id }) {
     await searchInput.type(query, { delay: 50 });
     await searchInput.press("Enter");
 
-    if (Date.now() - startTime > 8000) {
+    // ⏱️ START TIMER HERE (NOT AT FUNCTION START)
+    const searchStartTime = Date.now();
+
+    if (Date.now() - searchStartTime > 10000) {
       console.warn("⏳ Timeout safeguard hit before results load");
       return [];
     }
@@ -126,14 +129,14 @@ async function searchParts({ query, connection_id }) {
     let resultsLoaded = false;
 
     try {
-      await mobileCards.first().waitFor({ timeout: 6000 });
+      await mobileCards.first().waitFor({ timeout: 8000 });
       resultsLoaded = true;
       console.log("📱 Mobile results detected");
     } catch {}
 
     if (!resultsLoaded) {
       try {
-        await fallbackCards.first().waitFor({ timeout: 6000 });
+        await fallbackCards.first().waitFor({ timeout: 8000 });
         resultsLoaded = true;
         console.log("🖥️ Fallback results detected");
       } catch {}
@@ -146,7 +149,7 @@ async function searchParts({ query, connection_id }) {
 
     await page.screenshot({ path: "debug-results.png", fullPage: true });
 
-    if (Date.now() - startTime > 12000) {
+    if (Date.now() - searchStartTime > 12000) {
       console.warn("⏳ Timeout safeguard hit before extraction");
       return [];
     }
@@ -158,7 +161,7 @@ async function searchParts({ query, connection_id }) {
 
     console.log("📊 Mobile count:", await mobileCards.count());
     console.log("📊 Fallback count:", await fallbackCards.count());
-    
+
     const isMobileLayout = mobileCount > fallbackCount;
 
     let parts = [];
