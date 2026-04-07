@@ -123,14 +123,30 @@ async function searchParts({ query, connection_id }) {
       has: page.locator('text=Price'),
     });
 
-    await Promise.race([
-      mobileCards.first().waitFor({ timeout: 6000 }).catch(() => {}),
-      fallbackCards.first().waitFor({ timeout: 6000 }).catch(() => {})
-    ]);
+    let resultsLoaded = false;
+
+    try {
+      await mobileCards.first().waitFor({ timeout: 6000 });
+      resultsLoaded = true;
+      console.log("📱 Mobile results detected");
+    } catch {}
+
+    if (!resultsLoaded) {
+      try {
+        await fallbackCards.first().waitFor({ timeout: 6000 });
+        resultsLoaded = true;
+        console.log("🖥️ Fallback results detected");
+      } catch {}
+    }
+
+    if (!resultsLoaded) {
+      console.warn("⚠️ No results detected after waiting");
+      return [];
+    }
 
     await page.screenshot({ path: "debug-results.png", fullPage: true });
 
-    if (Date.now() - startTime > 8000) {
+    if (Date.now() - startTime > 12000) {
       console.warn("⏳ Timeout safeguard hit before extraction");
       return [];
     }
@@ -140,6 +156,9 @@ async function searchParts({ query, connection_id }) {
     const mobileCount = await mobileCards.count();
     const fallbackCount = await fallbackCards.count();
 
+    console.log("📊 Mobile count:", await mobileCards.count());
+    console.log("📊 Fallback count:", await fallbackCards.count());
+    
     const isMobileLayout = mobileCount > fallbackCount;
 
     let parts = [];
