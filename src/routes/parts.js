@@ -32,7 +32,7 @@ router.post("/search-parts", async (req, res) => {
       connection_id,
       vehicle: req.body.vehicle || null,
       options: {
-        limit: 5,
+        limit: 20,
         sort: "best"
       }
     });
