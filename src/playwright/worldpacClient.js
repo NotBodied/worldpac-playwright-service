@@ -313,47 +313,26 @@ async function searchParts({ query, connection_id }) {
               }
             }
 
-            // price
-            let price = null;
-            const priceEl = card.locator(':scope >> text=/\\$\\d+\\.\\d+/').first();
-            if (await priceEl.count()) {
-              const txt = await priceEl.textContent();
-              const match = txt?.match(/\$\d+\.\d+/);
-              if (match) price = match[0].replace('$', '');
-            }
+            if (!mfr_id) mfr_id = part_number;
 
-            // availability
-            let availability = null;
-            const qtyEl = card.locator('text=Qty').first();
-            if (await qtyEl.count()) {
-              const txt = await qtyEl.textContent();
-              const match = txt?.match(/Qty:(\d+)/);
-              if (match) availability = match[1];
-            }
+            const priceMatch = await card.textContent();
+            const price = priceMatch?.match(/\$\d+\.\d+/)?.[0]?.replace('$', '') || null;
 
-            // location
-            let location = null;
-            const locEl = card.locator('text=/\\b(MD|VA|PA)\\b/').first();
-            if (await locEl.count()) {
-              location = (await locEl.textContent())?.trim();
-            }
+            const qtyMatch = await card.textContent();
+            const availability = qtyMatch?.match(/Qty:(\d+)/)?.[1] || null;
 
-            // brand
+            const locationMatch = qtyMatch?.match(/Qty:\d+\s+((?:Special Order\s+)?[A-Z]{2}\s+[A-Za-z ]+)/);
+            let location = locationMatch?.[1]?.replace(/Submit.*$/i, '').trim() || null;
+
             let brand = null;
-
             const brandEl = row.locator('img[alt]');
             if (await brandEl.count()) {
               const alt = await brandEl.first().getAttribute('alt');
-
-              if (
-                alt &&
-                alt !== 'name' &&
-                !alt.toLowerCase().includes('image')
-              ) {
+              if (alt && alt !== 'name' && !alt.toLowerCase().includes('image')) {
                 brand = alt;
               }
             }
-
+              
             if (!part_number || added) continue;
 
             parts.push({
