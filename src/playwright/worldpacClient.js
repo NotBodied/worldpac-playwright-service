@@ -309,14 +309,41 @@ async function searchParts({ query, connection_id }) {
               }
 
               else if (!text.includes("Qty") && !text.includes("$")) {
-                if (!description) description = text;
+                if (!description) {
+                  let clean = text;
+
+                  // 🔥 CUT OFF AT "Product ID"
+                  if (clean.includes("Product ID")) {
+                    clean = clean.split("Product ID")[0];
+                  }
+
+                  description = clean.trim();
+                }
               }
             }
 
             if (!mfr_id) mfr_id = part_number;
 
-            const priceMatch = await card.textContent();
-            const price = priceMatch?.match(/\$\d+\.\d+/)?.[0]?.replace('$', '') || null;
+            const priceText = await card.textContent();
+
+            // get ALL prices
+            const matches = [...(priceText?.matchAll(/\$(\d+\.\d+)/g) || [])]
+              .map(m => parseFloat(m[1]));
+
+            let price = null;
+            let list_price = null;
+
+            if (matches.length === 1) {
+              price = matches[0];
+            }
+
+            if (matches.length >= 2) {
+              // sort low → high
+              matches.sort((a, b) => a - b);
+
+              price = matches[0];        // lower = cost
+              list_price = matches[matches.length - 1]; // higher = retail
+            }
 
             const qtyMatch = await card.textContent();
             const availability = qtyMatch?.match(/Qty:(\d+)/)?.[1] || null;
@@ -341,6 +368,7 @@ async function searchParts({ query, connection_id }) {
               normalized_part_number,
               mfr_id,
               price,
+              list_price,
               availability,
               location,
               brand,
