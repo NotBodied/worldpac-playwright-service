@@ -58,6 +58,9 @@ function normalizeParts(parts) {
       // 🔥 IMPORTANT: price → cost
       cost: p.price ?? 0,
 
+      list_price: p.list_price ?? null,
+      
+      
       // Convert availability into readable string
       availability: formatAvailability(p),
 
