@@ -70,16 +70,20 @@ async function searchParts({ query, connection_id }) {
     session = await getSession(connection_id);
     page = session.page;
 
+   const imageQueue = []; 
+
     // 🔥 ADD HERE (ONLY ONCE)
     page.on('response', async (response) => {
       const url = response.url();
 
-      if (url.includes('image') || url.includes('part') || url.includes('media')) {
-        try {
-          const text = await response.text();
-          console.log("🖼 IMAGE RESPONSE URL:", url);
-          console.log("🖼 IMAGE RESPONSE BODY:", text.slice(0, 500));
-        } catch {}
+      if (
+        url.includes('img.wp-static.com/wam') &&
+        url.includes('asset=') &&
+        url.includes('.JPG')
+      ) {
+
+        imageQueue.push(url);
+        console.log("🖼 QUEUED IMAGE:", url);
       }
     });
 
@@ -199,6 +203,11 @@ async function searchParts({ query, connection_id }) {
      // return [];
    // }
 
+    // 🔥 WAIT FOR IMAGE QUEUE TO FILL
+    await page.waitForTimeout(1500);
+
+    console.log("🖼 FINAL IMAGE QUEUE SIZE:", imageQueue.length);
+      
     console.log("🧠 Extracting via DOM...");
 
     const mobileCount = await mobileCards.count();
@@ -214,7 +223,7 @@ async function searchParts({ query, connection_id }) {
     try {
       if (isMobileLayout) {
         console.log("📱 Using MOBILE extraction");
-        parts = await extractMobile(page, searchStartTime);
+        parts = await extractMobile(page, searchStartTime, imageQueue);
       } else {
         console.log("🖥️ Using FALLBACK extraction");
         parts = await extractFallback(page);
@@ -248,7 +257,7 @@ async function searchParts({ query, connection_id }) {
   }
 }
 
-    async function extractMobile(page, searchStartTime) {
+    async function extractMobile(page, searchStartTime, imageQueue = []) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
       await cards.first().waitFor({ timeout: 6000 });
 
@@ -372,32 +381,14 @@ async function searchParts({ query, connection_id }) {
             const locationMatch = qtyMatch?.match(/Qty:\d+\s+((?:Special Order\s+)?[A-Z]{2}\s+[A-Za-z ]+)/);
             let location = locationMatch?.[1]?.replace(/Submit.*$/i, '').trim() || null;
             
-            // 🔥 IMAGE EXTRACTION (BACKGROUND IMAGE — REAL FIX)
-            let image_url = null;
-
-            // target product image container
-            const imgContainer = card.locator('.part-img-container');
-
-            // extract background-image from ANY child
-            const bgEl = imgContainer.locator('[style*="background-image"]');
-
-            if (await bgEl.count()) {
-              const style = await bgEl.first().getAttribute('style');
-
-              const match = style?.match(/url\(["']?(.*?)["']?\)/);
-
-              if (match && match[1]) {
-                let src = match[1];
-
-                if (src.startsWith("//")) {
-                  src = "https:" + src;
-                } else if (!src.startsWith("http")) {
-                  src = `https://speeddial.worldpac.com${src}`;
-                }
-
-                image_url = src;
-              }
+            // 🔍 DEBUG IMAGE QUEUE (ONLY RUN ON FIRST ITEM)
+            if (i === 0) {
+              console.log("🖼 IMAGE QUEUE SIZE:", imageQueue.length);
+              console.log("🖼 IMAGE QUEUE SAMPLE:", imageQueue.slice(0, 5));
             }
+
+            // 🔥 IMAGE FROM NETWORK QUEUE
+            let image_url = imageQueue[i] || imageQueue[0] || null;
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
