@@ -272,6 +272,12 @@ async function searchParts({ query, connection_id }) {
 
         const card = cards.nth(i);
 
+        // 🔍 DEBUG IMAGE HTML (TEMP)
+        if (i === 0) {
+          const html = await card.innerHTML();
+          console.log("🖼 CARD HTML:", html.slice(0, 1000));
+        }
+
         const rows = card.locator(':scope > div');
         const rowCount = await rows.count();
 
@@ -354,13 +360,21 @@ async function searchParts({ query, connection_id }) {
             // 🔥 IMAGE EXTRACTION
             let image_url = null;
 
-            const imgEl = card.locator('img');
-
+            // try standard img
+            const imgEl = card.locator('img').first();
+    
             if (await imgEl.count()) {
-              const src = await imgEl.first().getAttribute('src');
+              const img = imgEl.first();
+
+              // try src
+              let src = await img.getAttribute('src');
+
+              // fallback to lazy load attribute
+              if (!src || src.includes("placeholder")) {
+                src = await img.getAttribute('data-src');
+              }
 
               if (src) {
-                // handle relative URLs just in case
                 if (src.startsWith("http")) {
                   image_url = src;
                 } else if (src.startsWith("//")) {
@@ -370,7 +384,28 @@ async function searchParts({ query, connection_id }) {
                 }
               }
             }
+            // 🔥 BACKGROUND IMAGE FALLBACK
+            if (!image_url) {
+              const bgEl = card.locator('[style*="background-image"]');
 
+              if (await bgEl.count()) {
+                const style = await bgEl.first().getAttribute('style');
+
+                const match = style?.match(/url\(["']?(.*?)["']?\)/);
+
+                if (match && match[1]) {
+                  let src = match[1];
+
+                  if (src.startsWith("//")) {
+                    src = "https:" + src;
+                  } else if (!src.startsWith("http")) {
+                    src = `https://speeddial.worldpac.com${src}`;
+                  }
+
+                  image_url = src;
+                }
+              }
+            }
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
