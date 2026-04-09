@@ -350,6 +350,27 @@ async function searchParts({ query, connection_id }) {
 
             const locationMatch = qtyMatch?.match(/Qty:\d+\s+((?:Special Order\s+)?[A-Z]{2}\s+[A-Za-z ]+)/);
             let location = locationMatch?.[1]?.replace(/Submit.*$/i, '').trim() || null;
+            
+            // 🔥 IMAGE EXTRACTION
+            let image_url = null;
+
+            const imgEl = card.locator('img');
+
+            if (await imgEl.count()) {
+              const src = await imgEl.first().getAttribute('src');
+
+              if (src) {
+                // handle relative URLs just in case
+                if (src.startsWith("http")) {
+                  image_url = src;
+                } else if (src.startsWith("//")) {
+                  image_url = "https:" + src;
+                } else {
+                  image_url = `https://speeddial.worldpac.com${src}`;
+                }
+              }
+            }
+
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
@@ -372,6 +393,7 @@ async function searchParts({ query, connection_id }) {
               availability,
               location,
               brand,
+              image_url,
             });
 
             added = true;
