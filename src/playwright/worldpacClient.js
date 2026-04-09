@@ -240,7 +240,7 @@ async function searchParts({ query, connection_id }) {
       const totalCount = await cards.count();
 
       // 🔥 LIMIT RESULTS (VERY IMPORTANT)
-      const count = Math.min(totalCount, 15);
+      const count = Math.min(totalCount, 40);
 
       console.log(`📦 Mobile cards (limited): ${count} / ${totalCount}`);
 

@@ -29,7 +29,8 @@ async function searchPartsService({
   const sorted = sortParts(normalized, sort);
 
   // Limit
-  const results = sorted.slice(0, limit);
+  // 🔥 RETURN ALL RESULTS (frontend will handle pagination)
+  const results = sorted;
 
   return {
     query,
@@ -37,7 +38,7 @@ async function searchPartsService({
     results,
     meta: {
       total_found: normalized.length,
-      returned: results.length,
+      returned: normalized.length,
       execution_time_ms: Date.now() - start
     }
   };
