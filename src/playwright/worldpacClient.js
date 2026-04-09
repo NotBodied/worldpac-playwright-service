@@ -357,30 +357,30 @@ async function searchParts({ query, connection_id }) {
             const locationMatch = qtyMatch?.match(/Qty:\d+\s+((?:Special Order\s+)?[A-Z]{2}\s+[A-Za-z ]+)/);
             let location = locationMatch?.[1]?.replace(/Submit.*$/i, '').trim() || null;
             
-            // 🔥 IMAGE EXTRACTION (PRODUCT ONLY)
+            // 🔥 IMAGE EXTRACTION (BACKGROUND IMAGE — REAL FIX)
             let image_url = null;
 
-            // 🎯 target ONLY product image container
-            const imgEl = card.locator('.part-img-container img');
+            // target product image container
+            const imgContainer = card.locator('.part-img-container');
 
-            if (await imgEl.count()) {
-              const img = imgEl.first();
+            // extract background-image from ANY child
+            const bgEl = imgContainer.locator('[style*="background-image"]');
 
-              let src = await img.getAttribute('src');
+            if (await bgEl.count()) {
+              const style = await bgEl.first().getAttribute('style');
 
-              // fallback for lazy loading
-              if (!src || src.includes("data:image")) {
-                src = await img.getAttribute('data-src');
-              }
+              const match = style?.match(/url\(["']?(.*?)["']?\)/);
 
-              if (src && !src.includes("brands")) {
-                if (src.startsWith("http")) {
-                  image_url = src;
-                } else if (src.startsWith("//")) {
-                  image_url = "https:" + src;
-                } else {
-                  image_url = `https://speeddial.worldpac.com${src}`;
+              if (match && match[1]) {
+                let src = match[1];
+
+                if (src.startsWith("//")) {
+                  src = "https:" + src;
+                } else if (!src.startsWith("http")) {
+                  src = `https://speeddial.worldpac.com${src}`;
                 }
+
+                image_url = src;
               }
             }
 
