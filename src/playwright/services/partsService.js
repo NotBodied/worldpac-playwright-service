@@ -32,6 +32,13 @@ async function searchPartsService({
   // 🔥 RETURN ALL RESULTS (frontend will handle pagination)
   const results = sorted;
 
+  console.log("🧪 FINAL API OUTPUT SAMPLE:",
+    results.slice(0, 3).map(p => ({
+      part_number: p.part_number,
+      image_url: p.image_url
+    }))
+  );
+
   return {
     query,
     vehicle,
@@ -58,9 +65,9 @@ function normalizeParts(parts) {
 
       // 🔥 IMPORTANT: price → cost
       cost: p.price ?? 0,
-
       list_price: p.list_price ?? null,
       
+      image_url: p.image_url || null,
       
       // Convert availability into readable string
       availability: formatAvailability(p),
