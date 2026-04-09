@@ -70,6 +70,21 @@ async function searchParts({ query, connection_id }) {
     session = await getSession(connection_id);
     page = session.page;
 
+    // 🔥 ADD HERE (ONLY ONCE)
+    page.on('response', async (response) => {
+      const url = response.url();
+
+      if (url.includes('image') || url.includes('part') || url.includes('media')) {
+        try {
+          const text = await response.text();
+          console.log("🖼 IMAGE RESPONSE URL:", url);
+          console.log("🖼 IMAGE RESPONSE BODY:", text.slice(0, 500));
+        } catch {}
+      }
+    });
+
+
+
     // 💀 Detect dead page
     if (!page || page.isClosed()) {
       console.warn("⚠️ Page is dead — creating new session");
