@@ -1,7 +1,25 @@
 const { getSession } = require("./sessionManager");
 
-let isSearching = false;
+const searchQueues = new Map();
 
+  async function enqueueSearch(connection_id, task) {
+  const prev = searchQueues.get(connection_id) || Promise.resolve();
+
+  let resolveNext;
+  const next = new Promise(res => (resolveNext = res));
+
+  searchQueues.set(connection_id, prev.then(() => next));
+
+  try {
+    return await task();
+  } finally {
+    resolveNext();
+
+    if (searchQueues.get(connection_id) === next) {
+      searchQueues.delete(connection_id);
+    }
+  }
+}
 
   async function ensureLoggedIn(page) {
     console.log("🔐 Ensuring login state...");
@@ -49,17 +67,13 @@ let isSearching = false;
   }
 }
 async function searchParts({ query, connection_id }) {
+  return enqueueSearch(connection_id, async () => {
 
   console.log("📥 INCOMING REQUEST:", query, Date.now());
 
   const startTime = Date.now();
 
-  if (isSearching) {
-    console.log("⏳ Already searching — blocked");
-    return [];
-  }
-
-  isSearching = true;
+ 
   console.log("🔒 LOCK ACQUIRED");
 
   let session;
@@ -72,6 +86,7 @@ async function searchParts({ query, connection_id }) {
 
    const imageQueue = []; 
 
+   page.removeAllListeners('response');
     // 🔥 ADD HERE (ONLY ONCE)
     page.on('response', async (response) => {
       const url = response.url();
@@ -204,7 +219,12 @@ async function searchParts({ query, connection_id }) {
    // }
 
     // 🔥 WAIT FOR IMAGE QUEUE TO FILL
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(500);
+
+    const start = Date.now();
+    while (imageQueue.length < 5 && Date.now() - start < 3000) {
+      await page.waitForTimeout(250);
+    }
 
     console.log("🖼 FINAL IMAGE QUEUE SIZE:", imageQueue.length);
       
@@ -233,6 +253,7 @@ async function searchParts({ query, connection_id }) {
       parts = [];
     }
 
+
     console.log("🧾 RAW PARTS:", parts);
 
     const uniqueParts = [];
@@ -251,11 +272,10 @@ async function searchParts({ query, connection_id }) {
   } catch (err) {
     console.error("❌ searchParts crashed:", err.message);
     return [];
-  } finally {
-    isSearching = false;
-    console.log("🔓 LOCK RELEASED");
   }
-}
+
+  });
+  }
 
     async function extractMobile(page, searchStartTime, imageQueue = []) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
@@ -388,7 +408,10 @@ async function searchParts({ query, connection_id }) {
             }
 
             // 🔥 IMAGE FROM NETWORK QUEUE
-            let image_url = imageQueue[i] || imageQueue[0] || null;
+            let image_url = imageQueue.find(url =>
+              normalized_part_number &&
+              url.toLowerCase().includes(normalized_part_number.toLowerCase())
+            ) || null;
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
