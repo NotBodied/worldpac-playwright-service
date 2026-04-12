@@ -408,10 +408,7 @@ async function searchParts({ query, connection_id }) {
             }
 
             // 🔥 IMAGE FROM NETWORK QUEUE
-            let image_url = imageQueue.find(url =>
-              normalized_part_number &&
-              url.toLowerCase().includes(normalized_part_number.toLowerCase())
-            ) || null;
+            let image_url = imageQueue[i] || null;
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
