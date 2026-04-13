@@ -587,9 +587,21 @@ async function ensureVehicleSet(page, vehicle) {
     console.log('🚗 Using VIN path');
 
     try {
-      await page.fill('input[placeholder*="VIN"]', vehicle.vin);
-      await page.click('button:has-text("Search")');
-      await page.waitForTimeout(2000);
+      // Target VIN input directly (stable selector)
+    const vinInput = page.locator('#vin');
+
+    await vinInput.waitFor({ state: 'visible', timeout: 10000 });
+    await vinInput.fill(vehicle.vin);
+
+    // Wait until a Search button becomes enabled AFTER VIN input
+    const enabledSearchButton = page.locator('button:has-text("Search"):not([disabled])');
+
+    await enabledSearchButton.waitFor({ state: 'visible', timeout: 10000 });
+
+    await enabledSearchButton.first().click();
+
+    // Give time for vehicle to resolve
+    await page.waitForTimeout(3000);
     } catch (err) {
       console.log('❌ VIN entry failed:', err.message);
     }
