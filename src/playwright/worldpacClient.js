@@ -669,13 +669,29 @@ async function selectPartCategoryIfPresent(page, query) {
 
   const bestNode = categoryNodes.nth(bestMatchIndex);
 
-  const checkbox = bestNode.locator('input[type="checkbox"]');
+  // 🔥 Click the CATEGORY NODE (NOT checkbox)
+  const clickableArea = bestNode.locator('.sd-part-node-desc-text');
 
-  await checkbox.click();
+  console.log("👉 Clicking category node (not checkbox)");
 
-  console.log("⏳ Waiting for category results to load...");
+  await clickableArea.click();
 
-  await page.waitForTimeout(2500);
+console.log("⏳ Waiting for category selection to register...");
+await page.waitForTimeout(1500);
+
+// 🔥 NEW: Click PRICE button (THIS TRIGGERS RESULTS)
+const priceButton = page.locator('#price-button');
+
+if (await priceButton.count()) {
+  console.log("💰 Clicking PRICE button to load results...");
+  await priceButton.click();
+} else {
+  console.log("⚠️ Price button not found");
+}
+
+// 🔥 WAIT FOR RESULTS TO ACTUALLY LOAD
+console.log("⏳ Waiting for priced results...");
+await page.waitForTimeout(4000);
 }
 
 module.exports = { searchParts };
