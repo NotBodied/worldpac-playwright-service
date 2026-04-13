@@ -150,6 +150,10 @@ async function searchParts({ query, connection_id, vehicle = null }) {
     await searchInput.type(query, { delay: 50 });
     await searchInput.press("Enter");
 
+    await page.waitForTimeout(1000);
+
+    await selectPartCategoryIfPresent(page, query);
+
     // ⏱️ START TIMER HERE (NOT AT FUNCTION START)
     const searchStartTime = Date.now();
 
@@ -620,4 +624,58 @@ async function ensureVehicleSet(page, vehicle) {
     }
   }
 }
+
+async function selectPartCategoryIfPresent(page, query) {
+    console.log("🔎 Checking for category selection screen...");
+
+  const categoryNodes = page.locator('.sd-part-node');
+
+  const count = await categoryNodes.count();
+
+  if (count === 0) {
+    console.log("✅ No category selection needed");
+    return;
+  }
+
+  console.log(`📂 Found ${count} category options`);
+
+  let bestMatchIndex = 0;
+  let bestScore = 0;
+
+  for (let i = 0; i < count; i++) {
+    const text = await categoryNodes.nth(i).innerText();
+
+    if (!text) continue;
+
+    const normalized = text.toLowerCase();
+    const queryNormalized = query.toLowerCase();
+
+    let score = 0;
+
+    if (normalized.includes(queryNormalized)) score += 5;
+
+    const queryWords = queryNormalized.split(' ');
+    for (const word of queryWords) {
+      if (normalized.includes(word)) score += 1;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatchIndex = i;
+    }
+  }
+
+  console.log(`🎯 Selecting category index ${bestMatchIndex}`);
+
+  const bestNode = categoryNodes.nth(bestMatchIndex);
+
+  const checkbox = bestNode.locator('input[type="checkbox"]');
+
+  await checkbox.click();
+
+  console.log("⏳ Waiting for category results to load...");
+
+  await page.waitForTimeout(2500);
+}
+
 module.exports = { searchParts };
