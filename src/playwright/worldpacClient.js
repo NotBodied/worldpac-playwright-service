@@ -131,18 +131,7 @@ async function searchParts({ query, connection_id, vehicle = null }) {
       await ensureLoggedIn(page);
     }
 
-    const { logVehicleState, openVehicleSelector } = require("./utils/vehicleDebug");
-
-    // --- VEHICLE DEBUG ---
-    await logVehicleState(page);
-
-    const opened = await openVehicleSelector(page);
-
-    console.log("🚗 Vehicle selector opened:", opened);
-
-    if (opened) {
-      await page.waitForTimeout(2000);
-    }
+    await ensureVehicleSet(page, vehicle);
     // --- END VEHICLE DEBUG ---
 
     console.log("✅ Login complete");
@@ -582,4 +571,31 @@ async function searchParts({ query, connection_id, vehicle = null }) {
   return parts;
 }
 
+async function ensureVehicleSet(page, vehicle) {
+  if (!vehicle) {
+    console.log('🚗 No vehicle provided, skipping selection');
+    return;
+  }
+
+  console.log('🚗 Ensuring vehicle is set:', vehicle);
+
+  const { openVehicleSelector } = require('./utils/vehicleDebug');
+
+  await openVehicleSelector(page);
+
+  if (vehicle.vin) {
+    console.log('🚗 Using VIN path');
+
+    try {
+      await page.fill('input[placeholder*="VIN"]', vehicle.vin);
+      await page.click('button:has-text("Search")');
+      await page.waitForTimeout(2000);
+    } catch (err) {
+      console.log('❌ VIN entry failed:', err.message);
+    }
+
+  } else {
+    console.log('🚗 No VIN, YMM path not implemented yet');
+  }
+}
 module.exports = { searchParts };
