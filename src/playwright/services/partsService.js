@@ -19,7 +19,8 @@ async function searchPartsService({
   // 🔥 CALL YOUR EXISTING FUNCTION
   const rawParts = await searchParts({
     query,
-    connection_id
+    connection_id,
+    vehicle
   });
 
   // Normalize

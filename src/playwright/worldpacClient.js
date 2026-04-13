@@ -66,10 +66,11 @@ const searchQueues = new Map();
 
   }
 }
-async function searchParts({ query, connection_id }) {
+async function searchParts({ query, connection_id, vehicle = null }) {
   return enqueueSearch(connection_id, async () => {
 
   console.log("📥 INCOMING REQUEST:", query, Date.now());
+  console.log("🚗 Incoming vehicle:", vehicle);
 
   const startTime = Date.now();
 
@@ -129,6 +130,20 @@ async function searchParts({ query, connection_id }) {
 
       await ensureLoggedIn(page);
     }
+
+    const { logVehicleState, openVehicleSelector } = require("./utils/vehicleDebug");
+
+    // --- VEHICLE DEBUG ---
+    await logVehicleState(page);
+
+    const opened = await openVehicleSelector(page);
+
+    console.log("🚗 Vehicle selector opened:", opened);
+
+    if (opened) {
+      await page.waitForTimeout(2000);
+    }
+    // --- END VEHICLE DEBUG ---
 
     console.log("✅ Login complete");
 
