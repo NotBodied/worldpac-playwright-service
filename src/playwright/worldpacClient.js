@@ -587,27 +587,37 @@ async function ensureVehicleSet(page, vehicle) {
     console.log('🚗 Using VIN path');
 
     try {
-      // Target VIN input directly (stable selector)
-    const vinInput = page.locator('#vin');
+      const vinInput = page.locator('#vin');
 
-    await vinInput.waitFor({ state: 'visible', timeout: 10000 });
-    await vinInput.fill(vehicle.vin);
+      await vinInput.waitFor({ state: 'visible', timeout: 10000 });
 
-    // Wait until a Search button becomes enabled AFTER VIN input
-    const enabledSearchButton = page.locator('button:has-text("Search"):not([disabled])');
+      // Clear first (important for repeat runs)
+      await vinInput.fill('');
+      await vinInput.type(vehicle.vin, { delay: 20 });
 
-    await enabledSearchButton.waitFor({ state: 'visible', timeout: 10000 });
+      // 🔥 Submit form via Enter (ONLY method we use now)
+      await vinInput.press('Enter');
 
-    await enabledSearchButton.first().click();
+      console.log('⏳ Waiting for VIN to resolve...');
 
-    // Give time for vehicle to resolve
-    await page.waitForTimeout(3000);
+      // Give UI time to process VIN
+      await page.waitForTimeout(2000);
+
+      // 🔥 Handle possible "Continue" modal
+      const continueButton = page.locator('button:has-text("Continue")');
+
+      if (await continueButton.count()) {
+        console.log('👉 Clicking Continue on vehicle modal');
+        await continueButton.first().click();
+        await page.waitForTimeout(2000);
+      }
+
+      // Final stabilization before search
+      await page.waitForTimeout(1000);
+
     } catch (err) {
       console.log('❌ VIN entry failed:', err.message);
     }
-
-  } else {
-    console.log('🚗 No VIN, YMM path not implemented yet');
   }
 }
 module.exports = { searchParts };
