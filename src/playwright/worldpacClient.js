@@ -384,25 +384,31 @@ async function searchParts({ query, connection_id, vehicle = null }) {
 
             const priceText = await card.textContent();
 
-            // get ALL prices
-            const matches = [...(priceText?.matchAll(/\$(\d+\.\d+)/g) || [])]
-              .map(m => parseFloat(m[1]));
+          // get ALL prices
+          const matches = [...(priceText?.matchAll(/\$(\d+\.\d+)/g) || [])]
+            .map(m => parseFloat(m[1]));
 
-            let price = null;
-            let list_price = null;
+          let price = null;
+          let list_price = null;
+          let core_charge = null;
 
-            if (matches.length === 1) {
-              price = matches[0];
-            }
+          if (matches.length === 1) {
+            price = matches[0];
+          }
 
-            if (matches.length >= 2) {
-              // sort low → high
-              matches.sort((a, b) => a - b);
+          else if (matches.length === 2) {
+            matches.sort((a, b) => a - b);
+            price = matches[0];
+            list_price = matches[1];
+          }
 
-              price = matches[0];        // lower = cost
-              list_price = matches[matches.length - 1]; // higher = retail
-            }
-
+          else if (matches.length >= 3) {
+            matches.sort((a, b) => a - b);
+            core_charge = matches[0];       // 🔥 core
+            price = matches[1];             // actual cost
+            list_price = matches[matches.length - 1]; // retail
+          }
+              
             const qtyMatch = await card.textContent();
             const availability = qtyMatch?.match(/Qty:(\d+)/)?.[1] || null;
 
@@ -436,6 +442,7 @@ async function searchParts({ query, connection_id, vehicle = null }) {
               mfr_id,
               price,
               list_price,
+              core_charge,
               availability,
               location,
               brand,
@@ -562,6 +569,7 @@ async function searchParts({ query, connection_id, vehicle = null }) {
             normalized_part_number,
             mfr_id,
             price,
+            core_charge,
             availability,
             location,
             brand,
@@ -684,6 +692,7 @@ const priceButton = page.locator('#price-button');
 
 if (await priceButton.count()) {
   console.log("💰 Clicking PRICE button to load results...");
+  await priceButton.waitFor({ state: 'visible', timeout: 5000 });
   await priceButton.click();
 } else {
   console.log("⚠️ Price button not found");
