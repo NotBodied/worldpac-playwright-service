@@ -21,7 +21,7 @@ const searchQueues = new Map();
   }
 }
 
-  async function ensureLoggedIn(page) {
+  async function ensureLoggedIn(page, credentials) {
     console.log("🔐 Ensuring login state...");
 
     // 1. Load app (NOT /login)
@@ -55,11 +55,20 @@ const searchQueues = new Map();
 
     await userInput.waitFor({ timeout: 6000 });
 
-    await userInput.fill(process.env.WORLDPAC_USERNAME);
-    await page.locator('input[type="password"]').fill(process.env.WORLDPAC_PASSWORD);
+    if (!credentials?.username || !credentials?.password) {
+      throw new Error("❌ Missing Worldpac credentials");
+    }
+
+    await userInput.fill(credentials.username);
+    await page.locator('input[type="password"]').fill(credentials.password);
     await page.locator('button[type="submit"]').click();
 
-    await page.locator('input[name="searchTerm"]').waitFor({ timeout: 6000 });
+    try {
+      await page.locator('input[name="searchTerm"]').waitFor({ timeout: 6000 });
+    } catch (err) {
+      console.error("❌ Login failed — invalid credentials?");
+      throw new Error("INVALID_SUPPLIER_CREDENTIALS");
+    }
     await page.waitForTimeout(500); // 👈 ADD THIS
 
     console.log("✅ Login successful");
@@ -70,7 +79,8 @@ async function searchParts({
   query, 
   connection_id, 
   vehicle = null,
-  selected_category_index = null
+  selected_category_index = null,
+  credentials = null
 }) {
   return enqueueSearch(connection_id, async () => {
 
@@ -87,7 +97,9 @@ async function searchParts({
 
   try {
     // ✅ CREATE SESSION
-    session = await getSession(connection_id);
+    session = await getSession(connection_id, {
+      forceNew: !!credentials
+    });
     page = session.page;
 
    
@@ -107,14 +119,14 @@ async function searchParts({
 
     // ✅ LOGIN (WITH RETRY)
     try {
-      await ensureLoggedIn(page);
+      await ensureLoggedIn(page, credentials);
     } catch (err) {
       console.warn("⚠️ ensureLoggedIn failed — recreating session");
 
       session = await getSession(connection_id, { forceNew: true });
       page = session.page;
 
-      await ensureLoggedIn(page);
+      await ensureLoggedIn(page, credentials);
     }
 
     await ensureVehicleSet(page, vehicle);

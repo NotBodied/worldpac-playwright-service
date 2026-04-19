@@ -21,9 +21,10 @@ router.post("/search-parts", async (req, res) => {
 
   runJob(job_id, {
     query: req.body.query,
-    connection_id: "fitzflow-main-session",
+    connection_id: `shop-${req.body.shop_id}`, // 🔥 important
     vehicle: req.body.vehicle_context || null,
     selected_category_index: req.body.selected_category_index ?? null,
+    credentials: req.body.credentials || null,
     options: {
       limit: 20,
       sort: "best"

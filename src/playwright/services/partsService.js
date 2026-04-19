@@ -7,8 +7,16 @@ async function searchPartsService({
   connection_id,
   vehicle = null,
   selected_category_index = null,
+  credentials = null,
   options = {}
 }) {
+
+  if (!credentials) {
+  return {
+    error: "Worldpac not configured",
+    code: "NO_SUPPLIER_CREDENTIALS"
+  };
+}
 
   const start = Date.now();
 
@@ -22,7 +30,8 @@ async function searchPartsService({
     query,
     connection_id,
     vehicle,
-    selected_category_index
+    selected_category_index,
+    credentials
   });
 
  if (rawParts?.type === "category_selection") {

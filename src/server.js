@@ -33,8 +33,10 @@ app.post("/", async (req, res) => {
 
     const results = await searchPartsService({
       query,
-      connection_id: "fitzflow-main-session",
+      connection_id: `shop-${req.body.shop_id || "default"}`,
       vehicle: req.body.vehicle_context || null,
+      selected_category_index: req.body.selected_category_index ?? null,
+      credentials: req.body.credentials || null,
       options: {
         limit: 20,
         sort: "best"

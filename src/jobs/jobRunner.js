@@ -12,10 +12,12 @@ async function runJob(job_id, payload) {
     console.log("📦 SERVICE RESULT:", result?.results?.length);
 
     updateJob(job_id, {
-      status: "complete",
-      ...(result.type === "category_selection"
-        ? { type: "category_selection", categories: result.categories }
-        : { results: result.results || [] }
+      status: result.error ? "error" : "complete",
+      ...(result.error
+        ? { error: result.error, code: result.code }
+        : result.type === "category_selection"
+          ? { type: "category_selection", categories: result.categories }
+          : { results: result.results || [] }
       )
     });
 
