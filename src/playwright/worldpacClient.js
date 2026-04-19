@@ -51,6 +51,12 @@ const searchQueues = new Map();
 
   let isLoggedIn = hasSearch > 0 && hasLogin === 0;
 
+  // 🔥 ADD SAFETY: ensure we are not stuck on login page
+  const url = page.url();
+  if (url.includes("login")) {
+    isLoggedIn = false;
+  }
+
   console.log("🧠 Login state:", { hasSearch, hasLogin, isLoggedIn });
 
   
@@ -58,6 +64,8 @@ const searchQueues = new Map();
 
   if (!isLoggedIn) {
     console.log("🔑 Logging in...");
+
+    await page.context().clearCookies();
 
     console.log("🔑 Using credentials:", credentials?.username);
 
@@ -110,9 +118,8 @@ async function searchParts({
     session = await getSession(connection_id);
     page = session.page;
 
-    session = await getSession(connection_id);
-
-   
+    console.log("🧠 Using session:", connection_id);
+       
     // 💀 Detect dead page
     if (!page || page.isClosed()) {
       console.warn("⚠️ Page is dead — creating new session");

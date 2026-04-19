@@ -19,9 +19,16 @@ router.post("/search-parts", async (req, res) => {
     created_at: Date.now()
   });
 
+  if (!req.body.credentials?.username) {
+    console.warn("⚠️ Missing username in credentials");
+  }
+
+  // 🔥 Extract username BEFORE object
+  const username = req.body.credentials?.username || "anon";
+
   runJob(job_id, {
     query: req.body.query,
-    connection_id: `shop-${req.body.shop_id || "default"}`, // 🔥 important
+    connection_id: `shop-${req.body.shop_id || "default"}-${username}`,
     vehicle: req.body.vehicle_context || null,
     selected_category_index: req.body.selected_category_index ?? null,
     credentials: req.body.credentials || null,
