@@ -471,8 +471,22 @@ async function searchParts({
               console.log("🖼 IMAGE QUEUE SAMPLE:", imageQueue.slice(0, 5));
             }
 
-            // 🔥 IMAGE FROM NETWORK QUEUE
-            let image_url = imageQueue[i] || null;
+            // 🔥 IMAGE FROM DOM (RELIABLE)
+            let image_url = null;
+
+            const imgEl = card.locator('img');
+
+            if (await imgEl.count()) {
+              let src = await imgEl.first().getAttribute('src');
+
+              if (!src) {
+                src = await imgEl.first().getAttribute('data-src');
+              }
+
+              if (src && src.includes('img.wp-static.com')) {
+                image_url = src;
+              }
+            }
 
             let brand = null;
             const brandEl = row.locator('img[alt]');
