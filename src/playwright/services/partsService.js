@@ -130,6 +130,30 @@ function formatAvailability(p) {
 function buildAttributes(p) {
   const attrs = {};
 
+  // 🔥 INCLUDE SCRAPED ATTRIBUTES FIRST
+  if (Array.isArray(p.attributes)) {
+    for (const item of p.attributes) {
+      if (typeof item !== "string") continue;
+
+      const [key, ...rest] = item.split(":");
+      const value = rest.join(":").trim();
+
+      if (key && value) {
+        const cleanKey = key.trim();
+
+        // handle duplicates (Position: Left, Position: Front)
+        if (!attrs[cleanKey]) {
+          attrs[cleanKey] = value;
+        } else if (Array.isArray(attrs[cleanKey])) {
+          attrs[cleanKey].push(value);
+        } else {
+          attrs[cleanKey] = [attrs[cleanKey], value];
+        }
+      }
+    }
+  }
+
+  // 🔥 KEEP EXISTING METADATA
   if (p.location) {
     attrs.location = p.location;
   }
