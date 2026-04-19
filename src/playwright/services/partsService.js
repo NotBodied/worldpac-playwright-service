@@ -23,6 +23,15 @@ async function searchPartsService({
     vehicle
   });
 
+ if (rawParts?.type === "category_selection") {
+  return {
+    type: "category_selection",
+    categories: rawParts.categories,
+    query,
+    vehicle
+  };
+} 
+
   // Normalize
   const normalized = normalizeParts(rawParts);
 

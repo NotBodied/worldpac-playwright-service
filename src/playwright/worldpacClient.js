@@ -152,7 +152,39 @@ async function searchParts({ query, connection_id, vehicle = null }) {
 
     await page.waitForTimeout(1000);
 
-    await selectPartCategoryIfPresent(page, query);
+    const categories = await detectPartCategories(page);
+
+    if (categories && categories.length > 0) {
+
+      if (vehicle?.selected_category_index != null) {
+        console.log("🎯 Applying selected category:", vehicle.selected_category_index);
+
+        const node = page.locator('.sd-part-node').nth(vehicle.selected_category_index);
+
+        const clickable = node.locator('.sd-part-node-desc-text');
+
+        await clickable.click();
+
+        await page.waitForTimeout(1500);
+
+        const priceButton = page.locator('#price-button');
+
+        if (await priceButton.count()) {
+          await priceButton.waitFor({ state: 'visible', timeout: 5000 });
+          await priceButton.click();
+        }
+
+        await page.waitForTimeout(3000);
+
+      } else {
+        console.log("📂 Returning category options instead of auto-select");
+
+        return {
+          type: "category_selection",
+          categories
+        };
+      }
+    }
 
     // ⏱️ START TIMER HERE (NOT AT FUNCTION START)
     const searchStartTime = Date.now();
@@ -633,74 +665,28 @@ async function ensureVehicleSet(page, vehicle) {
   }
 }
 
-async function selectPartCategoryIfPresent(page, query) {
-    console.log("🔎 Checking for category selection screen...");
+async function detectPartCategories(page) {
+  const nodes = page.locator('.sd-part-node');
+  const count = await nodes.count();
 
-  const categoryNodes = page.locator('.sd-part-node');
+  if (count === 0) return null;
 
-  const count = await categoryNodes.count();
-
-  if (count === 0) {
-    console.log("✅ No category selection needed");
-    return;
-  }
-
-  console.log(`📂 Found ${count} category options`);
-
-  let bestMatchIndex = 0;
-  let bestScore = 0;
+  const categories = [];
 
   for (let i = 0; i < count; i++) {
-    const text = await categoryNodes.nth(i).innerText();
+    const node = nodes.nth(i);
 
-    if (!text) continue;
+    const text = await node.locator('.sd-part-node-desc-text').innerText();
 
-    const normalized = text.toLowerCase();
-    const queryNormalized = query.toLowerCase();
-
-    let score = 0;
-
-    if (normalized.includes(queryNormalized)) score += 5;
-
-    const queryWords = queryNormalized.split(' ');
-    for (const word of queryWords) {
-      if (normalized.includes(word)) score += 1;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatchIndex = i;
-    }
+    categories.push({
+      index: i,
+      label: text.trim()
+    });
   }
 
-  console.log(`🎯 Selecting category index ${bestMatchIndex}`);
-
-  const bestNode = categoryNodes.nth(bestMatchIndex);
-
-  // 🔥 Click the CATEGORY NODE (NOT checkbox)
-  const clickableArea = bestNode.locator('.sd-part-node-desc-text');
-
-  console.log("👉 Clicking category node (not checkbox)");
-
-  await clickableArea.click();
-
-console.log("⏳ Waiting for category selection to register...");
-await page.waitForTimeout(1500);
-
-// 🔥 NEW: Click PRICE button (THIS TRIGGERS RESULTS)
-const priceButton = page.locator('#price-button');
-
-if (await priceButton.count()) {
-  console.log("💰 Clicking PRICE button to load results...");
-  await priceButton.waitFor({ state: 'visible', timeout: 5000 });
-  await priceButton.click();
-} else {
-  console.log("⚠️ Price button not found");
+  return categories;
 }
 
-// 🔥 WAIT FOR RESULTS TO ACTUALLY LOAD
-console.log("⏳ Waiting for priced results...");
-await page.waitForTimeout(4000);
-}
+  
 
 module.exports = { searchParts };
