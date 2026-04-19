@@ -28,13 +28,14 @@ app.post("/", async (req, res) => {
       });
     }
 
-    // 🔥 Use your service layer
     const { searchPartsService } = require("./playwright/services/partsService");
+
+    // ✅ DEFINE THESE BEFORE OBJECT
+    const username = req.body.credentials?.username || "anon";
+    const shop_id = req.body.shop_id || "default";
 
     const results = await searchPartsService({
       query,
-      const username = req.body.credentials?.username || "anon";
-
       connection_id: `shop-${shop_id}-${username}-${Date.now()}`,
       vehicle: req.body.vehicle_context || null,
       selected_category_index: req.body.selected_category_index ?? null,
@@ -45,7 +46,6 @@ app.post("/", async (req, res) => {
       }
     });
 
-    // ⚠️ IMPORTANT: FitzFlow expects ARRAY, not object
     res.json(results.results);
 
   } catch (err) {
