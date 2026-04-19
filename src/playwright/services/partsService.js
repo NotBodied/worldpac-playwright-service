@@ -143,7 +143,11 @@ function buildAttributes(p) {
 
         // handle duplicates (Position: Left, Position: Front)
         if (!attrs[cleanKey]) {
-          attrs[cleanKey] = value;
+          const finalValue = Array.isArray(value)
+            ? value.join(", ")
+            : value;
+
+          attrs[cleanKey] = finalValue;
         } else if (Array.isArray(attrs[cleanKey])) {
           attrs[cleanKey].push(value);
         } else {

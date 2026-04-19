@@ -472,11 +472,14 @@ async function searchParts({
             // 🔥 ATTRIBUTES EXTRACTION (ADD THIS BLOCK)
             let attributes = [];
 
-            const attrNodes = row.locator('.product-attribute').count()
-              ? row.locator('.product-attribute')
-              : card.locator('.product-attribute');
-            const attrCount = await attrNodes.count();
+            let attrNodes = row.locator('.product-attribute');
+            let attrCount = await attrNodes.count();
 
+            if (attrCount === 0) {
+              attrNodes = card.locator('.product-attribute');
+              attrCount = await attrNodes.count();
+            }
+            
             for (let a = 0; a < attrCount; a++) {
               const attr = attrNodes.nth(a);
 
@@ -486,6 +489,10 @@ async function searchParts({
                 attributes.push(text.replace(/\s+/g, ' '));
               }
             }
+
+           if (i === 0) {
+            console.log("🧪 ATTRIBUTES FOUND:", attributes);
+           } 
 
             if (!part_number || added) continue;
 
