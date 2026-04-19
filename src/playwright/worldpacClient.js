@@ -115,7 +115,9 @@ async function searchParts({
 
   try {
     // ✅ CREATE SESSION
-    session = await getSession(connection_id);
+    session = await getSession(connection_id, {
+      forceNew: !!credentials
+    });
     page = session.page;
 
     console.log("🧠 Using session:", connection_id);

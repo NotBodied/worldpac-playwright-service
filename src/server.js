@@ -33,7 +33,9 @@ app.post("/", async (req, res) => {
 
     const results = await searchPartsService({
       query,
-      connection_id: `shop-${req.body.shop_id || "default"}`,
+      const username = req.body.credentials?.username || "anon";
+
+      connection_id: `shop-${shop_id}-${username}-${Date.now()}`,
       vehicle: req.body.vehicle_context || null,
       selected_category_index: req.body.selected_category_index ?? null,
       credentials: req.body.credentials || null,
