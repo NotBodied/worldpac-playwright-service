@@ -468,7 +468,25 @@ async function searchParts({
                 brand = alt;
               }
             }
-              
+            
+            // 🔥 ATTRIBUTES EXTRACTION (ADD THIS BLOCK)
+            let attributes = [];
+
+            const attrNodes = row.locator('.product-attribute').count()
+              ? row.locator('.product-attribute')
+              : card.locator('.product-attribute');
+            const attrCount = await attrNodes.count();
+
+            for (let a = 0; a < attrCount; a++) {
+              const attr = attrNodes.nth(a);
+
+              const text = (await attr.textContent())?.trim();
+
+              if (text) {
+                attributes.push(text.replace(/\s+/g, ' '));
+              }
+            }
+
             if (!part_number || added) continue;
 
             parts.push({
@@ -483,6 +501,7 @@ async function searchParts({
               location,
               brand,
               image_url,
+              attributes,
             });
 
             added = true;
