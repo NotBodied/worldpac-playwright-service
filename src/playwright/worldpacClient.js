@@ -77,7 +77,7 @@ async function searchParts({
   console.log("📥 INCOMING REQUEST:", query, Date.now());
   console.log("🚗 Incoming vehicle:", vehicle);
 
-  const startTime = Date.now();
+  
 
  
   console.log("🔒 LOCK ACQUIRED");
@@ -90,26 +90,7 @@ async function searchParts({
     session = await getSession(connection_id);
     page = session.page;
 
-   const imageQueue = []; 
-
-   page.removeAllListeners('response');
-    // 🔥 ADD HERE (ONLY ONCE)
-    page.on('response', async (response) => {
-      const url = response.url();
-
-      if (
-        url.includes('img.wp-static.com/wam') &&
-        url.includes('asset=') &&
-        url.includes('.JPG')
-      ) {
-
-        imageQueue.push(url);
-        console.log("🖼 QUEUED IMAGE:", url);
-      }
-    });
-
-
-
+   
     // 💀 Detect dead page
     if (!page || page.isClosed()) {
       console.warn("⚠️ Page is dead — creating new session");
@@ -162,7 +143,7 @@ async function searchParts({
     if (categories && categories.length > 0) {
 
       if (selected_category_index != null) {
-        console.log("🎯 Applying selected category:", vehicle.selected_category_index);
+        console.log("🎯 Applying selected category:", selected_category_index);
 
     const nodeCount = await page.locator('.sd-part-node').count();
 
@@ -277,14 +258,7 @@ async function searchParts({
    // }
 
     // 🔥 WAIT FOR IMAGE QUEUE TO FILL
-    await page.waitForTimeout(500);
-
-    const start = Date.now();
-    while (imageQueue.length < 5 && Date.now() - start < 3000) {
-      await page.waitForTimeout(250);
-    }
-
-    console.log("🖼 FINAL IMAGE QUEUE SIZE:", imageQueue.length);
+    
       
     console.log("🧠 Extracting via DOM...");
 
@@ -301,7 +275,7 @@ async function searchParts({
     try {
       if (isMobileLayout) {
         console.log("📱 Using MOBILE extraction");
-        parts = await extractMobile(page, searchStartTime, imageQueue);
+        parts = await extractMobile(page, searchStartTime);
       } else {
         console.log("🖥️ Using FALLBACK extraction");
         parts = await extractFallback(page);
@@ -335,7 +309,7 @@ async function searchParts({
   });
   }
 
-    async function extractMobile(page, searchStartTime, imageQueue = []) {
+    async function extractMobile(page, searchStartTime) {
       const cards = page.locator('.mobile-card.product-quote-mobile');
       await cards.first().waitFor({ timeout: 6000 });
 
@@ -466,30 +440,28 @@ async function searchParts({
             let location = locationMatch?.[1]?.replace(/Submit.*$/i, '').trim() || null;
             
             // 🔍 DEBUG IMAGE QUEUE (ONLY RUN ON FIRST ITEM)
-            if (i === 0) {
-              console.log("🖼 IMAGE QUEUE SIZE:", imageQueue.length);
-              console.log("🖼 IMAGE QUEUE SAMPLE:", imageQueue.slice(0, 5));
-            }
+            
 
-            // 🔥 IMAGE FROM DOM (RELIABLE)
+            
+            // 🔥 TARGET REAL PART IMAGE ONLY
             let image_url = null;
 
-            const imgEl = card.locator('img');
+            const partImage = card.locator('img.sd-part-image');
 
-            if (await imgEl.count()) {
-              let src = await imgEl.first().getAttribute('src');
+            if (await partImage.count()) {
+              let src = await partImage.first().getAttribute('src');
 
               if (!src) {
-                src = await imgEl.first().getAttribute('data-src');
+                src = await partImage.first().getAttribute('data-src');
               }
 
-              if (src && src.includes('img.wp-static.com')) {
+              if (src && src.includes('asset=')) {
                 image_url = src;
               }
             }
 
             let brand = null;
-            const brandEl = row.locator('img[alt]');
+            const brandEl = row.locator('img[alt]:not(.sd-part-image)');
             if (await brandEl.count()) {
               const alt = await brandEl.first().getAttribute('alt');
               if (alt && alt !== 'name' && !alt.toLowerCase().includes('image')) {
