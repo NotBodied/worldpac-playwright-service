@@ -6,6 +6,7 @@ async function searchPartsService({
   query,
   connection_id,
   vehicle = null,
+  selected_category_index = null,
   options = {}
 }) {
 
@@ -20,7 +21,8 @@ async function searchPartsService({
   const rawParts = await searchParts({
     query,
     connection_id,
-    vehicle
+    vehicle,
+    selected_category_index
   });
 
  if (rawParts?.type === "category_selection") {

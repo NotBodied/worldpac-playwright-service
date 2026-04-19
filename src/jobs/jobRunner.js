@@ -13,7 +13,10 @@ async function runJob(job_id, payload) {
 
     updateJob(job_id, {
       status: "complete",
-      results: result.results || []
+      ...(result.type === "category_selection"
+        ? { type: "category_selection", categories: result.categories }
+        : { results: result.results || [] }
+      )
     });
 
     console.log("✅ JOB COMPLETE:", job_id);

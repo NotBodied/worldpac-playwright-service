@@ -23,6 +23,7 @@ router.post("/search-parts", async (req, res) => {
     query: req.body.query,
     connection_id: "fitzflow-main-session",
     vehicle: req.body.vehicle_context || null,
+    selected_category_index: req.body.selected_category_index ?? null,
     options: {
       limit: 20,
       sort: "best"

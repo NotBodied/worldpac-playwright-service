@@ -66,7 +66,12 @@ const searchQueues = new Map();
 
   }
 }
-async function searchParts({ query, connection_id, vehicle = null }) {
+async function searchParts({ 
+  query, 
+  connection_id, 
+  vehicle = null,
+  selected_category_index = null
+}) {
   return enqueueSearch(connection_id, async () => {
 
   console.log("📥 INCOMING REQUEST:", query, Date.now());
@@ -156,11 +161,17 @@ async function searchParts({ query, connection_id, vehicle = null }) {
 
     if (categories && categories.length > 0) {
 
-      if (vehicle?.selected_category_index != null) {
+      if (selected_category_index != null) {
         console.log("🎯 Applying selected category:", vehicle.selected_category_index);
 
-        const node = page.locator('.sd-part-node').nth(vehicle.selected_category_index);
+    const nodeCount = await page.locator('.sd-part-node').count();
 
+    if (selected_category_index >= nodeCount) {
+      console.warn("⚠️ Invalid category index");
+      return [];
+    }
+
+    const node = page.locator('.sd-part-node').nth(selected_category_index);
         const clickable = node.locator('.sd-part-node-desc-text');
 
         await clickable.click();
@@ -175,6 +186,13 @@ async function searchParts({ query, connection_id, vehicle = null }) {
         }
 
         await page.waitForTimeout(3000);
+
+        const cards = page.locator('.mobile-card.product-quote-mobile');
+
+        if (!(await cards.count())) {
+          console.warn("⚠️ Category selection failed to load results");
+          return [];
+        }
 
       } else {
         console.log("📂 Returning category options instead of auto-select");
