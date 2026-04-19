@@ -21,7 +21,7 @@ router.post("/search-parts", async (req, res) => {
 
   runJob(job_id, {
     query: req.body.query,
-    connection_id: `shop-${req.body.shop_id}`, // 🔥 important
+    connection_id: `shop-${req.body.shop_id || "default"}`, // 🔥 important
     vehicle: req.body.vehicle_context || null,
     selected_category_index: req.body.selected_category_index ?? null,
     credentials: req.body.credentials || null,

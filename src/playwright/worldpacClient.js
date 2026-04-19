@@ -46,10 +46,20 @@ const searchQueues = new Map();
   ]);
 
   // 3. Check if already logged in
-  const isLoggedIn = await page.locator('input[name="searchTerm"]').count() > 0;
+  const hasSearch = await page.locator('input[name="searchTerm"]').count();
+  const hasLogin = await page.locator('#username').count();
+
+  let isLoggedIn = hasSearch > 0 && hasLogin === 0;
+
+  console.log("🧠 Login state:", { hasSearch, hasLogin, isLoggedIn });
+
+  
+  
 
   if (!isLoggedIn) {
     console.log("🔑 Logging in...");
+
+    console.log("🔑 Using credentials:", credentials?.username);
 
     const userInput = page.locator('#username');
 
@@ -97,10 +107,10 @@ async function searchParts({
 
   try {
     // ✅ CREATE SESSION
-    session = await getSession(connection_id, {
-      forceNew: !!credentials
-    });
+    session = await getSession(connection_id);
     page = session.page;
+
+    session = await getSession(connection_id);
 
    
     // 💀 Detect dead page
